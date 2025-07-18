@@ -6,7 +6,7 @@ In this study, we did not develop new software; thus, we provide example command
 
 ### Content:
  - [Genome Assembly](https://github.com/dux16/gpT2T_project#--genome-assembly)<br>
-   * [Initial assembly)](https://github.com/dux16/gpT2T_project#--contig-assembly)<br>
+   * [Initial assembly](https://github.com/dux16/gpT2T_project#--contig-assembly)<br>
    * [Pseudochromosome construction](https://github.com/dux16/gpT2T_project#--contig-assembly)<br>
    * [Gap filling](https://github.com/dux16/gpT2T_project#--polishing)<br>
    * [rDNA assembly](https://github.com/dux16/gpT2T_project#--rDNA-assembly)<br>
