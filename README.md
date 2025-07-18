@@ -71,7 +71,7 @@ In this study, we did not develop new software; thus, we provide example command
 #### - Pseudochromosome construction
   ```
   ## Scaffolding
-  ### [HicTrioBinning](https://github.com/BGI-Qingdao/HicTrioBinning)<br>
+  ### [HicTrioBinning](https://github.com/BGI-Qingdao/HicTrioBinning)
   bash ./HTB.sh -M gpT2T_mat.fasta -P gpT2T_pat.fasta -1 GP_HiC_R1.fastq.gz -2 GP_HiC_R2.fastq.gz -N 100 -B bwa -S seqtk -O ./ -I 1
   cat maternal.reads_1.fq.gz homo.reads_1.fq.gz > mat_HiC_R1.fastq.gz
   cat maternal.reads_2.fq.gz homo.reads_2.fq.gz > mat_HiC_R2.fastq.gz
