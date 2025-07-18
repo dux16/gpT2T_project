@@ -157,7 +157,7 @@ In this study, we did not develop new software; thus, we provide example command
   ```
   ## Homology-based prediction
   ## RNA-seq annotation
-  ## Ab initio prediction
+  ## *Ab initio* prediction
   ## EVM
   ```
 
