@@ -48,11 +48,12 @@ In this study, we did not develop new software; thus, we provide example command
   ```
   ## HiFiasm assemblies
   ### Building the 31-mer hash table of panda parents using yak
-  yak count -k31 -b37 -t10 -o father.yak panda_father_80x_1.fastq panda_father_80x_2.fastq
-  yak count -k31 -b37 -t10 -o mother.yak panda_mother_80x_1.fastq panda_mother_80x_2.fastq
+  yak count -k31 -b37 -t10 -o father.yak panda_father_80x_R1.fastq.gz panda_father_80x_R2.fastq.gz
+  yak count -k31 -b37 -t10 -o mother.yak panda_mother_80x_R1.fastq.gz panda_mother_80x_R2.fastq.gz
   ### Perfoming hifiasm
-  hifiasm -1 father.yak -2 mother.yak -o gpT2T.hifiasm -t 80 ./m64*.ccs.fq.gz
-  gfatools 
+  hifiasm -1 father.yak -2 mother.yak -o gpT2T.hifiasm -t 80 $path/m64*.ccs.fq.gz
+  gfatools gfa2fa gpT2T.hifiasm.dip.hap1.p_ctg.gfa > gpT2T.hifiasm.dip.hap1.p_ctg.fna
+  gfatools gfa2fa gpT2T.hifiasm.dip.hap2.p_ctg.gfa > gpT2T.hifiasm.dip.hap2.p_ctg.fna
   
   ## Verkko assemblies combining HiFi and Ultra-Long ONT reads
   ### Preparing the compressed homopolymer reads
@@ -70,7 +71,6 @@ In this study, we did not develop new software; thus, we provide example command
   ```
 #### - Pseudochromosome construction
   ```
-  ## Scaffolding
   ### HicTrioBinning
   bash ./HTB.sh -M gpT2T_mat.fasta -P gpT2T_pat.fasta -1 GP_HiC_R1.fastq.gz -2 GP_HiC_R2.fastq.gz -N 100 -B bwa -S seqtk -O ./ -I 1
   cat maternal.reads_1.fq.gz homo.reads_1.fq.gz > mat_HiC_R1.fastq.gz
@@ -78,14 +78,74 @@ In this study, we did not develop new software; thus, we provide example command
   cat paternal.reads_1.fq.gz homo.reads_1.fq.gz > pat_HiC_R1.fastq.gz
   cat paternal.reads_2.fq.gz homo.reads_2.fq.gz > pat_HiC_R2.fastq.gz
   ### Juicer and  3D-DNA pipeline for maternal
-  bwa-mem2 index assembly.haplotype1.fasta
+  bwa index assembly.haplotype1.fasta
   python2 $juicer/misc/generate_site_positions.py DpnII mat assembly.haplotype1.fasta
   
   awk 'BEGIN{OFS="\t"}{print $1, $NF}' mat_DpnII.txt > mat.chrom.sizes
   bash ./scripts/juicer.sh -g gpT2T_mat -z assembly.haplotype1.fasta -p mat.chrom.sizes -y mat_DpnII.txt -D /public/home/duxin/software/05.3D_genome/juicer-1.6 -d /data01/gpasm/01.GP_T2T_asm/04.hap_Chr_asm/02.chr_asm/mat -t 60 -S early
   ### Juicer and  3D-DNA pipeline for paternal
+  bwa index assembly.haplotype2.fasta
+  python2 $juicer/misc/generate_site_positions.py DpnII pat assembly.haplotype2.fasta
+  
+  awk 'BEGIN{OFS="\t"}{print $1, $NF}' pat_DpnII.txt > pat.chrom.sizes
+  bash ./scripts/juicer.sh -g gpT2T_pat -z assembly.haplotype2.fasta -p pat.chrom.sizes -y pat_DpnII.txt -D /public/home/duxin/software/05.3D_genome/juicer-1.6 -d /data01/gpasm/01.GP_T2T_asm/04.hap_Chr_asm/02.chr_asm/pat -t 60 -S early
   ```
+  The [JuiceBox](https://s3.us-east-1.wasabisys.com/hicfiles/public/Juicebox/Juicebox_1.11.08.exe) was used to manually curate the Hi-C maps for maternal and paternal.
+  
 #### - Gap filling
   ```
+  ## Making the haplotype-specific 21-mer markers
+  meryl k=21 count output mat_R1.meryl mat_80x_R1.fastq.gz
+  meryl k=21 count output mat_R2.meryl mat_80x_R2.fastq.gz
+  meryl k=21 count output pat_R1.meryl pat_80x_R1.fastq.gz
+  meryl k=21 count output pat_R2.meryl pat_80x_R2.fastq.gz
+  meryl k=21 count output child_1.meryl child_R1.fq.gz
+  meryl k=21 count output child_2.meryl child_R2.fq.gz
+  meryl union-sum output mat.meryl mat*_*.meryl
+  meryl union-sum output pat.meryl pat*_*.meryl
+  meryl union-sum output child.meryl child*_*.meryl
+  $MERQURY/trio/hapmers.sh mat.meryl/ pat.meryl child.meryl
+  meryl print mat_only.meryl | awk '{print $1}' > maternal.uniq.flt.mer
+  meryl print pat_only.meryl | awk '{print $1}' > paternal.uniq.flt.mer
+  ## Running HAST4TGS: https://github.com/BGI-Qingdao/HAST4TGS
+  CLASSIFY_ONLY.sh --paternal_mer paternal.uniq.flt.mer --maternal_mer maternal.uniq.flt.mer --format fastq --thread 80 --offspring 20220406-UNL272-P4-PAK05241.pass.fastq.gz --offspring 20220406-UNL272-P4-PAK05745.pass.fastq.gz --offspring 20220406-UNL272-P4-PAK05782.pass.fastq.gz --offspring 20220406-UNL272-P4-PAK05820.pass.fastq.gz --offspring 20220406-UNL272-P4-PAK05887.pass.fastq.gz --offspring 20220407-UNL272-P4-PAK06109.pass.fastq.gz --offspring 20220407-UNL272-P4-PAK06244.pass.fastq.gz --offspring 20220407-UNL272-P6-PAK05314.pass.fastq.gz --offspring 20220407-UNL272-P6-PAK05756.pass.fastq.gz --offspring 20220407-UNL272-P6-PAK05829.pass.fastq.gz --offspring 20220407-UNL272-P6-PAK07349.pass.fastq.gz --offspring 20220407-UNL272-P6-PAK07797.pass.fastq.gz
+  ## Applying new standard
+  perl renew_UL-ONT_trio-binning.pl ./phasing.out
+  ## Extracting UL-ONT reads
+  for fq in `ls *pass.fq.gz`; do for nf in maternal_new.cut paternal_new.cut; do hap=${nf/_new.cut/}; p=${fq/.fastq.gz/}; seqtk subseq $fq $nf | pigz -9 --best -p 20 > ${hap}_$p.fq.gz; done; done
+  ## minimap2
   
+  ## GapCloser: https://github.com/BGI-Qingdao/TGS-GapCloser
+  ```
+#### - rDNA assembly
+  ```
+  ## Running rnammer to identify 18S and 28S rRNA
+  rnammer -S euk -gff mat_rRNA.gff -xml mat_rRNA.xml gpT2T.hifiasm.dip.hap1.p_ctg.fna
+  rnammer -S euk -gff pat_rRNA.gff -xml pat_rRNA.xml gpT2T.hifiasm.dip.hap2.p_ctg.fna
+  ## Running infernal to identify 5.8S rRNA
+  cmscan -Z length*2/1000000 --cut_ga --rfam --nohmmonly --tblout mat_tempout/seq1.tblout --fmt 2 --cpu 20 --clanin /xxx/infernal-1.1.4-linux-intel-gcc/Rfam_lib/Rfam.clanin /xxx/infernal-1.1.4-linux-intel-gcc/Rfam_lib/Rfam.cm mat-split/seq1.fa > mat_tempout/seq1.cmscan
+  cmscan -Z length*2/1000000 --cut_ga --rfam --nohmmonly --tblout pat_tempout/seq2.tblout --fmt 2 --cpu 20 --clanin /xxx/infernal-1.1.4-linux-intel-gcc/Rfam_lib/Rfam.clanin /xxx/infernal-1.1.4-linux-intel-gcc/Rfam_lib/Rfam.cm pat-split/seq2.fa > pat_tempout/seq2.cmscan
+  perl convert_cmscan2gff3.pl mat_tempout mat_infernal
+  perl convert_cmscan2gff3.pl pat_tempout pat_infernal
+  ## Mummer
+  mummer -maxmatch -l 20 -b -F -L -c rDNA_region.fasta rDNA_region.fasta > rDNA_region2self.out
+  mummerplot -p rDNA_region2self rDNA_region2self.out --png
+  
+  Script for editing genome available here: https://git.mpi-cbg.de/assembly/programs/manualcurationhic
+  ```
+  
+#### - Genome polishing and assessment
+  ```
+  ## PacBio HiFi polishing
+  
+  ```
+#### - Polar bear genome assembly
+  ```
+  
+  ```
+
+### - Genome Annoation
+Methods and code as described by Osmanski et al.,  [2023](https://www.science.org/doi/10.1126/science.abn1430)
+#### - Annotation of repetitive elements
+  ```
   ```
