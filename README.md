@@ -21,7 +21,7 @@ In this study, we did not develop new software; thus, we provide example command
    * [SNP Calling, Nucleotide Diversity and ROH Analyses](https://https://github.com/dux16/gpT2T_project#--SNP-calling-nucleotide-diversity-and-ROH-analyses)<br>
    * [Estimation of *De Novo* Mutations](https://github.com/dux16/gpT2T_project#--haplotype-analysis)<br>
  - [Centromere Analysis](https://github.com/dux16/gpT2T_project#--centromere-analysis)<br>
-   * [Centromere Prediction]()<br>
+   * [Centromere Prediction](https://github.com/dux16/gpT2T_project#--centromere-prediction)<br>
    * [HOR Detection](https://github.com/dux16/gpT2T_project#--HOR-detection)<br>
    * [Composit Elements](https://github.com/dux16/gpT2T_project#--composit-elements)<br>
  - [Y Chromosome Analysis](https://github.com/dux16/gpT2T_project#--Y-chromosome-analysis)<br>
@@ -55,7 +55,7 @@ In this study, we did not develop new software; thus, we provide example command
   gfatools gfa2fa gpT2T.hifiasm.dip.hap1.p_ctg.gfa > gpT2T.hifiasm.dip.hap1.p_ctg.fna
   gfatools gfa2fa gpT2T.hifiasm.dip.hap2.p_ctg.gfa > gpT2T.hifiasm.dip.hap2.p_ctg.fna
   
-  ## Verkko assemblies combining HiFi and Ultra-Long ONT reads
+  ## Verkko assemblies combining HiFi, Ultra-Long ONT, and NGS reads
   ### Preparing the compressed homopolymer reads
   dehomopolymerate -f mat_80x_merged.fq.gz | pigz --fast -p 12 -9 > mat_nohomop.fa.gz
   dehomopolymerate -f pat_80x_merged.fq.gz | pigz --fast -p 12 -9 > pat_nohomop.fa.gz
@@ -99,11 +99,11 @@ In this study, we did not develop new software; thus, we provide example command
   meryl k=21 count output mat_R2.meryl mat_80x_R2.fastq.gz
   meryl k=21 count output pat_R1.meryl pat_80x_R1.fastq.gz
   meryl k=21 count output pat_R2.meryl pat_80x_R2.fastq.gz
-  meryl k=21 count output child_1.meryl child_R1.fq.gz
-  meryl k=21 count output child_2.meryl child_R2.fq.gz
-  meryl union-sum output mat.meryl mat*_*.meryl
-  meryl union-sum output pat.meryl pat*_*.meryl
-  meryl union-sum output child.meryl child*_*.meryl
+  meryl k=21 count output child_R1.meryl child_R1.fq.gz
+  meryl k=21 count output child_R2.meryl child_R2.fq.gz
+  meryl union-sum output mat.meryl mat_R*.meryl
+  meryl union-sum output pat.meryl pat_R*.meryl
+  meryl union-sum output child.meryl child_R*.meryl
   $MERQURY/trio/hapmers.sh mat.meryl/ pat.meryl child.meryl
   meryl print mat_only.meryl | awk '{print $1}' > maternal.uniq.flt.mer
   meryl print pat_only.meryl | awk '{print $1}' > paternal.uniq.flt.mer
@@ -130,10 +130,11 @@ In this study, we did not develop new software; thus, we provide example command
   ## Mummer
   mummer -maxmatch -l 20 -b -F -L -c rDNA_region.fasta rDNA_region.fasta > rDNA_region2self.out
   mummerplot -p rDNA_region2self rDNA_region2self.out --png
+  ## Identifying rDNA units of maternal and paternal assemblies
   
-  Script for editing genome available here: https://git.mpi-cbg.de/assembly/programs/manualcurationhic
+  ## Detecting the copy number of rDNA in maternal and paternal genomes based on Trio-Bining UL-ONT reads
+  
   ```
-  
 #### - Genome polishing and assessment
   ```
   ## PacBio HiFi polishing
@@ -145,7 +146,85 @@ In this study, we did not develop new software; thus, we provide example command
   ```
 
 ### - Genome Annoation
-Methods and code as described by Osmanski et al.,  [2023](https://www.science.org/doi/10.1126/science.abn1430)
 #### - Annotation of repetitive elements
+  ```
+  ## 01. RepeatMasker
+  ## 02. RepeatModeler
+  ## 03. RepeatProteinMasker
+  ## 04. TRF
+  ```
+#### - Annoation of protein coding genes
+  ```
+  ## Homology-based prediction
+  ## RNA-seq annotation
+  ## Ab initio prediction
+  ## EVM
+  ```
+
+### - Genomic Analyses
+#### - Genomic Analysis
+  ```
+  
+  ```
+#### - SNP Calling, Nucleotide Diversity and ROH Analyses
+  ```
+  
+  ```
+#### - Estimation of *De Novo* Mutations
+  ```
+  
+  ```
+
+### - Centromere Analysis
+#### - Centromere prediction
+  ```
+  
+  ```
+#### - HOR Detection
+  ```
+  ```
+#### - Composit Elements
+  ```
+  ```
+### - Y Chromosome Analysis
+#### - Y chromosome structure analysis
+  ```
+  
+  ```
+#### - Composite Element Identification
+  ```
+  ```
+#### - ERV1 Analysis
+  ```
+  ```
+#### - Curation of Y chromosome genes
+   ```
+   ```
+#### - The species-species divergence calculation of giant panda and brown bear
+  ```
+  ```
+#### - The analysis of autosomal transposition
+  ```
+  ```
+#### - Gene conversion detection
+  ```
+  ```
+#### - The transcriptome analysis of Y chromosome genes
+  ```
+  ```
+### - Comparative Genomic Analysis
+#### - Orthologous Genes Identification
+  ```
+  ```
+#### - Selection Pressure Analysis
+  ```
+  ```
+#### - Conserved Non-coding Elements Analysis
+  ```
+  ```
+#### - Pseudogene Identification
+  ```
+  ```
+#### - Functional Enrichment Analysis
   ```
   ```
