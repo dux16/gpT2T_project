@@ -1,5 +1,5 @@
 # gpT2T_project
-**Custom scripts used for analyses of paper [ Huizhong Fan#^, Chentao Yang#^, Xin Du#^, Lei Nie#^, Jiazheng Jin#^, Chen Huang, Xin Huang, Yang Zhou, Xupeng Bi, Mengyang Xu, Jiang Hu, Guiqiang Wang, Linxin Qiu, Dongya Wu, Ye Wang, Rong Hou, Guojie Zhang*^, Fuwen Wei*^ ](https://xxx)
+**Custom scripts used for analyses of paper [ Huizhong Fan#<sup>, Chentao Yang#<sup>, Xin Du#<sup>, Lei Nie#<sup>, Jiazheng Jin#<sup>, Chen Huang, Xin Huang, Yang Zhou, Xupeng Bi, Mengyang Xu, Jiang Hu, Guiqiang Wang, Linxin Qiu, Dongya Wu, Ye Wang, Rong Hou, Guojie Zhang*<sup>, Fuwen Wei*<sup> ](https://xxx)
 .**<br>
 
 In this study, we did not develop new software; thus, we provide example commands for analyses or provide links to other sources employed.
