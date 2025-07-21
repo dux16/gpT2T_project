@@ -151,6 +151,17 @@ In this study, we did not develop new software; thus, we provide example command
   xxx/software/hifiasm-0.24.0/hifiasm -t 24 -o PolarBear.hifiasm_ul_hic.asm --h1 $hic1 --h2 $hic2 --ul $ul $hifi
   date
   
+  # additional scaffolding process using hic data with yahs
+  genome='PolarBear.hifiasm_ul_hic.asm.hic.p_ctg.fasta'
+  hic1='xxx/polar_bear/00.dataset/Fastq/hic/BJX-xin_Hic.1.clean.fastq.gz'
+  hic2='xxx/polar_bear/00.dataset/Fastq/hic/BJX-xin_Hic.2.clean.fastq.gz'
+  # mapping
+  xxx/software/Aligner/bwa/bwa mem -t 24 ../$genome $hic1 $hic2 |samtools view -@4 -bS -h - > aligned.bam
+  samtools sort -@28 -o aligned_sorted.bam aligned.bam
+  samtools index aligned_sorted.bam
+  
+  # YAHS 
+  xxx/software/Assembly/yahs/yahs --no-contig-ec --telo-motif "TTAGGG" -o PolarBear ../$genome aligned_sorted.bam
   ```
 
 ### - Genome Annoation
