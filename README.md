@@ -251,7 +251,29 @@ In this study, we did not develop new software; thus, we provide example command
   ```
 #### - SNP Calling, Nucleotide Diversity and ROH Analyses
   ```
-  
+  ## Running pav to call heterozygous variants
+  singularity run pav_latest.sif  -c 48
+  ## Regions of high heterozygosity 
+  echo "CHROM\tBIN_START\tBIN_END\tN_VARIANTS\tVARIANTS/KB" > hetero_50kb.density
+  bedtools coverage -a <(bedtools makewindows -g gpT2T_v1.0.genome.fa.fai) -w 50000 | awk '{OFS="\t";print $1,$2+1,$3}') -b pav_gpT2T.vcf.gz -counts | awk 'BEGIN{scale=10;OFS="\t"}{print $1,$2,$3,$4,$4/50}'>>  hetero_50kb.density
+  ## Regions of high nucleotide diversity
+  sort -k5gr gp.50kb.pi.windowed.pi|head -n 4862 | sort -k1V | cut -f1,4,5,9 -d$'\t' > gp.50kb_0.1top.bed
+  bedtools intersect -a gpT2T_annot_v2.0_PCGs.gff3 -b gp.50kb_0.1top.bed -u -wa | cut -f1,4,5,9 -d$'\t' | awk '{for (i=1; i<=NF; i++) if ($i ~ /Name=/) {sub(/;.*$/, "", $i); split($i, a, "="); print a[2]}}' > gp.50kb_0.1top_genes.list
+  ## ROHs
+  multiIntersectBed -i ./00.data/QIN*.ROH.bed |awk '{OFS="\t";print $1,$2,$3,$3-$2,$4}' > QIN_isecSTAT_temp.bed
+  multiIntersectBed -i ./00.data/SC*.ROH.bed |awk '{OFS="\t";print $1,$2,$3,$3-$2,$4}' > SC_isecSTAT_temp.bed
+  multiIntersectBed -i ./00.data/*.ROH.bed |awk '{OFS="\t";print $1,$2,$3,$3-$2,$4}' > ISEC_isecSTAT_temp.bed
+  awk '$5>=8 {OFS="\t";print $1,$2,$3}' QIN_isecSTAT_temp.bed > QIN_ROH_union_indiv8_temp.bed
+  awk '$5>=17 {OFS="\t";print $1,$2,$3}' SC_isecSTAT_temp.bed > SC_ROH_union_indiv17_temp.bed
+  bedtools intersect -a QIN_ROH_union_indiv8_temp.bed -b SC_ROH_union_indiv17_temp.bed > QIN_SC_ROH_union_isec_indiv_temp.bed
+  bedtools subtract -a QIN_ROH_union_indiv8_temp.bed -b SC_ROH_union_indiv17_temp.bed > QIN_ROH_union_sub_indiv_temp.bed
+  bedtools subtract -b QIN_ROH_union_indiv8_temp.bed -a SC_ROH_union_indiv17_temp.bed > SC_ROH_union_sub_indiv_temp.bed
+  echo -e "CHROM\tSTART\tEND\tindivCNT\tPROPORTION\tLABEL" > result.bed
+  bedtools intersect -a <(cut -f1-3,5 ISEC_isecSTAT_temp.bed) -b QIN_SC_ROH_union_isec_indiv_temp.bed | uniq | awk 'BEGIN{OFS="\t"}{print $0,$4/48,"ISEC"}' >> result.bed
+  bedtools intersect -a <(cut -f1-3,5 QIN_isecSTAT_temp.bed) -b QIN_ROH_union_sub_indiv_temp.bed | uniq | awk 'BEGIN{OFS="\t"}{print $0,$4/15,"QIN"}' >> result.bed
+  bedtools intersect -a <(cut -f1-3,5 SC_isecSTAT_temp.bed) -b SC_ROH_union_sub_indiv_temp.bed | uniq | awk 'BEGIN{OFS="\t"}{print $0,$4/33,"SC"}' >> result.bed
+  sort -k1,1V -k2,2n result.bed -o result.bed && rm *_temp*
+  bedtools intersect -a gpT2T_annot_v2.0_PCGs.gff3 -b <(grep QIN result.bed) -u -wa | awk '{OFS="\t";print $1,$4,$5,$9}' | awk '{for (i=1; i<=NF; i++) if ($i ~ /Name=/) {sub(/;.*$/, "", $i); split($i, a, "="); print a[2]}}' > QIN_sub_genes.list
   ```
 #### - Estimation of *De Novo* Mutations
   ```
