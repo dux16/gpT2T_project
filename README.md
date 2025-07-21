@@ -91,7 +91,7 @@ In this study, we did not develop new software; thus, we provide example command
   bash ./scripts/juicer.sh -g gpT2T_pat -z assembly.haplotype2.fasta -p pat.chrom.sizes -y pat_DpnII.txt -D /public/home/duxin/software/05.3D_genome/juicer-1.6 -d /data01/gpasm/01.GP_T2T_asm/04.hap_Chr_asm/02.chr_asm/pat -t 60 -S early
   ```
   The [JuiceBox](https://s3.us-east-1.wasabisys.com/hicfiles/public/Juicebox/Juicebox_1.11.08.exe) was used to manually curate the Hi-C maps for maternal and paternal.
-  
+
 #### - Gap filling
   ```
   ## Making the haplotype-specific 21-mer markers
@@ -142,6 +142,14 @@ In this study, we did not develop new software; thus, we provide example command
   ```
 #### - Polar bear genome assembly
   ```
+  date
+  # Hybrid assembly with HiFi, ultralong and Hi-C reads
+  hic1=xxx/polar_bear/00.dataset/Fastq/hic/BJX-xin_Hic.1.clean.fastq.gz
+  hic2=xxx/polar_bear/00.dataset/Fastq/hic/BJX-xin_Hic.2.clean.fastq.gz
+  ul=xxx/polar_bear/00.dataset/Fastq/nanopore/ONT_50k.fastq.gz,xxx/polar_bear/00.dataset/Fastq/nanopore/added.ONT_50k.fastq.gz
+  hifi="xxx/polar_bear/00.dataset/Fastq/hifi/HiFi.fastq.gz xxx/polar_bear/00.dataset/Fastq/hifi/added.HiFi.fastq.gz"
+  xxx/software/hifiasm-0.24.0/hifiasm -t 24 -o PolarBear.hifiasm_ul_hic.asm --h1 $hic1 --h2 $hic2 --ul $ul $hifi
+  date
   
   ```
 
@@ -162,9 +170,73 @@ In this study, we did not develop new software; thus, we provide example command
   ```
 
 ### - Genomic Analyses
-#### - Genomic Analysis
+#### - Heterozygous Variant Analyses
   ```
+  ## for SNP, indel detection
   
+   for i in `seq 1 20`
+   do
+   	chr="chr"$i
+  	 [ -d $chr ] || mkdir $chr
+  	 cd $chr
+  	 echo "#!/bin/bash
+   date
+   $soft/nucmer --maxmatch -t 48 -l 100 -c 500 -p $chr $data/$chr/$chr.mat.fasta $data/$chr/$chr.pat.fasta
+   $soft/delta-filter -m -i 90 -l 100 $chr.delta > $chr.delta.filt
+   $soft/dnadiff -d $chr.delta.filt -p $chr
+   mv $chr.snps $chr.var
+   python3 scripts/split_mummerVar2snpAndindel.py $chr.var $chr
+   python3 scripts/indel_statistic.py $chr.indel
+   python3 scripts/small_indel_Pos2bed.py  $chr.indel.report.txt > $chr.indel.bed
+   date" >  $chr.sh
+  	 easy_submit  -t 48 -m 20G -s yes -p bnode $chr.sh
+  	 cd ..
+   done
+   
+  ## combine all chrs
+  # snp
+  for chr in `ls |grep chr|grep -v 'chrX' |grep -v 'chrY'`
+  do
+  	cat $chr/$chr.snp | awk '{print $11"\t"$1-1"\t"$1"\t"$2"\t"$3"\t"$12"\t"$4-1"\t"$4}'
+  done > mat_vs_pat.snp.bed
+  
+  # small indel
+  for chr in `ls |grep chr`
+  do
+  	cat $chr/$chr.indel.bed
+  done  > mat_vs_pat.indel.bed
+  
+  ## for SV detection
+  mumdir='xxx/nucmer_MatRef' # which contains the nucmer mapping results
+  for a in chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20
+  do
+  	[ -d $a  ] || mkdir $a
+  	cd $a
+  	[ -L $a.delta.filt  ] || ln -s $mumdir/$a/${a}.delta.filt
+  	mat=`head -1 $a.delta.filt|awk '{print $1}'`
+  	pat=`head -1 $a.delta.filt|awk '{print $2}'`
+  
+  	echo "#file	name	tags
+  $mat	${a}_hap1	lw:1.5
+  $pat	${a}_hap2	lw:1.5" > genome.txt
+  	echo "#!/bin/bash
+  date
+  export PATH=\"xxx/software/Aligner/mummer4/bin:\$PATH\"
+  show-coords -THrd ${a}.delta.filt > ${a}.coords.filt
+  source xxx/miniconda3/bin/activate syri_env
+  syri -c ${a}.coords.filt -d ${a}.delta.filt -r $mat -q $pat
+  plotsr --sr syri.out --genomes genome.txt -H 1 -W 12 -o $a.plotsr.pdf
+  echo '$a done'
+  date" > ${a}.syri.sh
+  
+      sh ${a}.syri.sh
+  	plotsr --sr syri.out --genomes genome.txt -H 1 -W 12 -o $a.plotsr.pdf
+  	cd ..
+  done
+  
+  find ./ -name "syri.out" | grep -v 'sex' | xargs cat |sort -k1,1V -k2n > autosome.syri.out
+  python3 ../../../bin/post_syri.py autosome.syri.out > autosome.syri.sv.tab
+  cut -f 12 autosome.syri.sv.tab|awk '{sum+=$1};END{print sum}'
   ```
 #### - SNP Calling, Nucleotide Diversity and ROH Analyses
   ```
