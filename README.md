@@ -48,8 +48,8 @@ In this study, we did not develop new software; thus, we provide example command
   ```
   ## HiFiasm assemblies
   ### Building the 31-mer hash table of panda parents using yak
-  yak count -k31 -b37 -t10 -o father.yak panda_father_80x_R1.fastq.gz panda_father_80x_R2.fastq.gz
-  yak count -k31 -b37 -t10 -o mother.yak panda_mother_80x_R1.fastq.gz panda_mother_80x_R2.fastq.gz
+  yak count -k31 -b37 -t10 -o father.yak pat_NGS_80x_R1.fastq.gz pat_NGS_80x_R2.fastq.gz
+  yak count -k31 -b37 -t10 -o mother.yak mat_NGS_80x_R1.fastq.gz mat_NGS_80x_R2.fastq.gz
   ### Perfoming hifiasm
   hifiasm -1 father.yak -2 mother.yak -o gpT2T.hifiasm -t 80 $path/m64*.ccs.fq.gz
   gfatools gfa2fa gpT2T.hifiasm.dip.hap1.p_ctg.gfa > gpT2T.hifiasm.dip.hap1.p_ctg.fna
@@ -95,12 +95,12 @@ In this study, we did not develop new software; thus, we provide example command
 #### - Gap filling
   ```
   ## Making the haplotype-specific 21-mer markers
-  meryl k=21 count output mat_R1.meryl mat_80x_R1.fastq.gz
-  meryl k=21 count output mat_R2.meryl mat_80x_R2.fastq.gz
-  meryl k=21 count output pat_R1.meryl pat_80x_R1.fastq.gz
-  meryl k=21 count output pat_R2.meryl pat_80x_R2.fastq.gz
-  meryl k=21 count output child_R1.meryl child_R1.fq.gz
-  meryl k=21 count output child_R2.meryl child_R2.fq.gz
+  meryl k=21 count output mat_R1.meryl mat_NGS_80x_R1.fastq.gz
+  meryl k=21 count output mat_R2.meryl mat_NGS_80x_R2.fastq.gz
+  meryl k=21 count output pat_R1.meryl pat_NGS_80x_R1.fastq.gz
+  meryl k=21 count output pat_R2.meryl pat_NGS_80x_R2.fastq.gz
+  meryl k=21 count output child_R1.meryl child_NGS_80x_R1.fq.gz
+  meryl k=21 count output child_R2.meryl child_NGS_80x_R2.fq.gz
   meryl union-sum output mat.meryl mat_R*.meryl
   meryl union-sum output pat.meryl pat_R*.meryl
   meryl union-sum output child.meryl child_R*.meryl
@@ -138,7 +138,18 @@ In this study, we did not develop new software; thus, we provide example command
 #### - Genome polishing and assessment
   ```
   ## PacBio HiFi polishing
-  
+  nextpolish2 xxx
+  ## Evaluating the quality of assemblies
+  ### Building a merged 21-mer database
+  meryl k=21 count output child_NGS1.meryl child_NGS_R1.fq.gz
+  meryl k=21 count output child_NGS1.meryl child_NGS_R1.fq.gz
+  meryl k=21 count output child_hifi.meryl gp_HiFi.fastq.gz
+  meryl union-sum output merged.meryl child_*.meryl
+  ### Running Merqury
+  /xxx/merqury/merqury.sh merged.meryl gpT2T_mat_polished.genome.fna gpT2T_pat_polished.genome.fna gpT2T_polish
+  ### Manually select the chromosome with the highest quality value to generate the chimeric genome
+  chimeric=gpT2T.genome.fna 
+  /xxx/merqury/merqury.sh merged.meryl $chimeric gpT2T
   ```
 #### - Polar bear genome assembly
   ```
@@ -163,14 +174,23 @@ In this study, we did not develop new software; thus, we provide example command
   # YAHS 
   xxx/software/Assembly/yahs/yahs --no-contig-ec --telo-motif "TTAGGG" -o PolarBear ../$genome aligned_sorted.bam
   ```
-
+  #### - gpT2T vs GPv1
+  ```
+  
+  ```
 ### - Genome Annoation
 #### - Annotation of repetitive elements
   ```
+mat_geno=
+pat_geno=
   ## 01. RepeatMasker
+
   ## 02. RepeatModeler
+
   ## 03. RepeatProteinMasker
+
   ## 04. TRF
+
   ```
 #### - Annoation of protein coding genes
   ```
@@ -184,7 +204,6 @@ In this study, we did not develop new software; thus, we provide example command
 #### - Heterozygous Variant Analyses
   ```
   ## for SNP, indel detection
-  
    for i in `seq 1 20`
    do
    	chr="chr"$i
