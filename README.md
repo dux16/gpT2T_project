@@ -207,8 +207,26 @@ In this study, we did not develop new software; thus, we provide example command
 #### - Annoation of protein coding genes
   ```
   ## Homology-based prediction
+  for i in cat cattle dog giant_panda horse human pig polar_bear;
+  do
+  echo "java -Xmx150g -jar /xxx/GeMoMa-1.9.jar CLI GeMoMaPipeline threads=50 AnnotationFinalizer.r=NO pc=true o=true t=/xxx/chimeric_genome/gpT2T.genome.fna GAF.a=\"iAA>=0.75\" i=$i a=/xxx/z.homology_species/${i}.genome.gff g=/xxx/z.homology_species/${i}.genome.fna outdir=/xxx/$i GeMoMa.m=500000; perl ./scripts/ConvertFormat_GeMoMa.pl /xxx/$i/final_annotation.gff"
+  done > run_GeMoMa.sh
+  echo "
+#SBATCH --job-name GMM
+#SBATCH -c 50 --mem 150G
+#SBATCH --get-user-env
+#SBATCH -o /xxx/GMM.slurm.out
+#SBATCH -e /xxx/GMM.slurm.err
+#SBATCH -D /xxx
+#SBATCH -N 1
+#SBATCH --partition=bnode
+bash run_GeMoMa.sh
+" > GeMoMa_sbatch.sh
+  sbatch GeMoMa_sbatch.sh
   ## RNA-seq annotation
+  
   ## Ab initio prediction
+  
   ## EVM
   ```
 
