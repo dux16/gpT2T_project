@@ -261,10 +261,88 @@ In this study, we did not develop new software; thus, we provide example command
 ### - Centromere Analysis
 #### - Centromere prediction
   ```
-  
+  mkdir tmp
+
+## run trf to find 
+trf gp_assembly.fasta 4 7 7 80 10 500 2000 -d -h
+
+
+## transform dat to bed
+awk 'BEGIN{chr=""; OFS="\t"} {if($1 == "Sequence:") {chr=$2} else if(NF==15){print chr,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15}}' gp_assembly.fasta.4.7.7.80.10.500.2000.dat | awk 'OFS="\t"{print $1,$2,$3,"repeat_"NR,$9,$4,$5,$6,$7,$8,$10,$11,$12,$13,$14,$15}'> pandas.over5k.bed 
+
+#filter region with length <= 5k or similarity < 70 or motif length < 20 or containing less than 20 motifs and generate motif fasta
+bedmap --max-element --fraction-either 0.1 pandas.over5k.bed | uniq > pandas.over5k.no_overlap.bed
+awk '$7>20 && $6>= 20 && $9 >= 70 && $3-$2 > 5000' pandas.over5k.no_overlap.bed > pandas.over5k.no_overlap.idover70.bed
+sort pandas.over5k.no_overlap.idover70.bed | uniq | awk '{print ">"$4"\n"$16}' > pandas.over5k.no_overlap.idover70.pri.fasta
+
+## remove similar motifs
+cd-hit-est -i pandas.over5k.no_overlap.idover70.pri.fasta -o pandas.over5k.no_overlap.idover70.fasta -d 0 -aS 0.95 -c 0.95 -G 1 -g 1
+
+sort pandas.over5k.no_overlap.idover70.bed | uniq | awk '{print ">"$4"\n"$16""$16}' > pandas.over5k.no_overlap.idover70.double.fasta
+minimap2 -xmap-ont -c -k 11 -p 0.2 pandas.over5k.no_overlap.idover70.double.fasta pandas.over5k.no_overlap.idover70.fasta | awk '$1 != $6 && $11/$2>0.8' | sort -k2,2n -k1,1 -k6,6> self_align.paf
+cut -f1,6 self_align.paf | uniq > pair.ids
+python3 Partition.py -rel pair.ids | cut -f2- | sed 's/\t/\n/g' > dup.ids 
+python3 fastaKit.py -exl dup.ids pandas.over5k.no_overlap.idover70.fasta > pandas.over5k.no_overlap.idover70.rmdup.fasta 
+python3 fastaKit.py -exl dup.ids pandas.over5k.no_overlap.idover70.double.fasta > pandas.over5k.no_overlap.idover70.rmdup.double.fasta
+minimap2 -xmap-ont -c -k 11 -p 0.2 pandas.over5k.no_overlap.idover70.rmdup.double.fasta pandas.over5k.no_overlap.idover70.rmdup.fasta | awk '$1 != $6 && $11/$2>0.9' | sort -k2,2n -k1,1 -k6,6> self_align.r2.paf
+cut -f1,6 self_align.r2.paf | uniq > pair.r2.ids 
+python3 Partition.py -rel pair.r2.ids | cut -f2- | sed 's/\t/\n/g' > dup.r2.ids
+python3 fastaKit.py -exl dup.r2.ids pandas.over5k.no_overlap.idover70.rmdup.fasta > pandas.over5k.no_overlap.idover70.rmdup.r2.fasta 
+python3 fastaKit.py pandas.over5k.no_overlap.idover70.rmdup.r2.fasta -len > pandas.over5k.no_overlap.idover70.rmdup.r2.len
+trf pandas.over5k.no_overlap.idover70.rmdup.r2.fasta  2 7 7 80 10 30 2000 -d -h > repeat.fasta
+mv pandas.over5k.no_overlap.idover70.rmdup.r2.fasta.2.7.7.80.10.30.2000.dat tmp/pandas_repeat.trf.dat
+awk 'BEGIN{chr=""; OFS="\t"} {if($1 == "Sequence:") {chr=$2} else if(NF==15){print chr,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15}}' tmp/pandas_repeat.trf.dat | awk 'OFS="\t"{print $1,$2,$3,"subrepeat_"NR,$9,$4,$5,$6,$7,$8,$10,$11,$12,$13,$14,$15}'> tmp/pandas_repeat.trf.bed
+cut -f1 tmp/pandas_repeat.trf.bed | sort | uniq > ./tmp/exist.ids
+grep -wf ./tmp/exist.ids pandas.over5k.no_overlap.idover70.rmdup.r2.len > tmp/pandas_repeat.trf.len 
+join tmp/pandas_repeat.trf.len tmp/pandas_repeat.trf.bed | awk '($4-$3)/$2 > 0.9' | awk 'OFS="\t" {print $1,$3,$4,$5,$6/($4-$3),$17}' > tmp/pandas_repeat.trf_contain_sub.bed
+bedmap --max-element --fraction-either 0.1 tmp/pandas_repeat.trf_contain_sub.bed | sort |uniq > tmp/pandas_repeat.trf_contain_sub.rm_overlap.bed
+cut -f1 tmp/pandas_repeat.trf_contain_sub.rm_overlap.bed > tmp/pandas_repeat.trf_contain_sub.rm_overlap.ids
+python3 fastaKit.py -exl tmp/pandas_repeat.trf_contain_sub.rm_overlap.ids pandas.over5k.no_overlap.idover70.rmdup.r2.fasta > tmp/pandas_repeat.rmdup.r2.pure.fasta
+sort tmp/pandas_repeat.trf_contain_sub.rm_overlap.bed | uniq | awk '{print ">"$1"\n"$6}' > tmp/pandas_repeat.trf_contain_sub.rm_overlap.fasta
+python3 fastaKit.py -lgt 20 tmp/pandas_repeat.trf_contain_sub.rm_overlap.fasta > tmp/pandas_repeat.trf_contain_sub.rm_overlap.long.fasta
+cat tmp/pandas_repeat.rmdup.r2.pure.fasta tmp/pandas_repeat.trf_contain_sub.rm_overlap.long.fasta > tmp/pandas_repeat.rmdup.r2.rmsub.fasta
+awk '{if($1 ~ ">") {print $0} else {print $0$0}}' tmp/pandas_repeat.rmdup.r2.rmsub.fasta > tmp/pandas_repeat.rmdup.r2.rmsub.double.fasta 
+minimap2 -xmap-ont -c -k 11 -p 0.2 tmp/pandas_repeat.rmdup.r2.rmsub.double.fasta tmp/pandas_repeat.rmdup.r2.rmsub.fasta | awk '$1 != $6 && $11/$2>0.9' | sort -k2,2n -k1,1 -k6,6> tmp/self_align.r3.paf
+cut -f1,6 tmp/self_align.r3.paf | uniq > tmp/pair.r3.ids 
+python3 Partition.py -rel tmp/pair.r3.ids | cut -f2- | sed 's/\t/\n/g' > tmp/dup.r3.ids
+python3 fastaKit.py -exl tmp/dup.r3.ids tmp/pandas_repeat.rmdup.r2.rmsub.fasta > pandas.over5k.no_overlap.idover70.rmdup.rmsub.r3.fasta
+
+## re-align the motif to assembly
+RepeatMasker -pa 25 -cutoff 100 -lib pandas.over5k.no_overlap.idover70.rmdup.rmsub.r3.fasta -s -nolow -gff -dir repeatmasker gp_assembly.fasta
   ```
 #### - HOR Detection
   ```
+## generate hicat HOR annotation. hor_region.bed contain records of the Sat_556 arrays and mask.bed contain records of non-Sat_556 motifs (include TE and composite element) annotations, mon.fasta is a SAT_556 motif
+cat "hor_region.bed" | while read a; do
+    chr=`echo $a | cut -f 1 -d " "`
+    begin=`echo $a | cut -f 2 -d " "`
+    end=`echo $a | cut -f 3 -d " "`
+    dirname="${chr}"
+    [ -d $dirname ] || mkdir $dirname
+    cd $dirname
+    mkdir tmp
+echo "#!/bin/bash
+grep -w ${chr} ../mask.bed > mask.bed
+python3 getInterval.py -all -mask --cutfile mask.bed -fasta ${fastadic}/${chr}.fasta > masked.fa
+python3 getInterval.py -c -low ${begin} -up ${end} -fasta masked.fa | sed 's/_/-/g'> ${chr}.HOR.fasta
+python3 HiCAT.py -i ${chr}.HOR.fasta -t ../../mon.fasta -o ${chr}_hor -st 0.01 -th 18
+" > ${chr}.work.sh
+    sbatch -c 18 --mem 30000 --partition=cpu ${chr}.work.sh
+    cd ..
+done
+
+## generate NTRprism plots to revalidate the HOR annotation. The NTRprism script can be found at https://github.com/altemose/NTRprism
+python3 getInterval.py -all -mask --cutfile mask.bed -fasta ~/pandas_T2T/data/gp_mat.v0.4.6.polish2.fasta > masked.fa
+python3 cutbyBed.py -fasta masked.fa -bed hor_region.bed > hor_region.fasta
+perl NTRprism_ProcessFasta_v0.22.pl hor_region.fasta test 1 100000 30 17 0
+for a in `ls test.*.span100000.k17.mincount30.bin1.txt`; do 
+filename=`basename $a`
+name=`echo $filename | sed -e 's/.span100000.k17.mincount30.bin1.txt//g' -e 's/test.region_//g'`
+chrom=`echo $name | cut -f1 -d "."`
+pos=`echo $name | cut -f2,3 -d "."`
+grep -v NNNNNNNNNNNNNNNNN $a > ${chrom}.span100000.k17.mincount30.bin1.txt
+Rscript NTRprism_PlotSpectrum.r --args chrX.span100000.k17.mincount30.bin1.txt $pos 10000 $chrom
+done
   ```
 #### - Composit Elements
   ```
