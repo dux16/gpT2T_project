@@ -181,16 +181,23 @@ In this study, we did not develop new software; thus, we provide example command
 ### - Genome Annoation
 #### - Annotation of repetitive elements
   ```
-mat_geno=
-pat_geno=
   ## 01. RepeatMasker
-
+  RepeatMasker -pa 50 -nolow -norna -no_is -a -gff -species mammals gpT2T.genome.fna
+  perl ./scripts/ConvertRepeatMasker2gff.pl gpT2T.genome.fna.out TE.gff TE
   ## 02. RepeatModeler
-
+  BuildDatabase -name gpT2T gpT2T.genome.fna
+  RepeatModeler -pa 50 -database gpT2T -LTRStruct
+  RepeatMasker -pa 50 -lib ./custom.lib gpT2T.genome.fna -a
+  perl ./scripts/ConvertRepeatMasker2gff.pl gpT2T.genome.fna.out Denovo.gff Denovo
   ## 03. RepeatProteinMasker
-
+  perl ./scripts/split_fasta.pl gpT2T.genome.fna split_by_scaffold 20000000
+  for i in split_by_scaffold/*.fa; do echo "RepeatProteinMask -noLowSimple -pvalue 1e-04 -engine rmblast $i; perl ./scripts/mod_RPM_out.pl $i.annot > $i.annot.mod";  done > 02.split.running.sh
+  ParaFly -CPU 50 -c 02.split.running.sh
+  cat split_by_scaffold/*annot.mod > gpT2T.genome.fna.repeatproteinmasker.annot
+  rm -rf split_by_scaffold
+  perl ./scripts/ConvertRepeatMasker2gff.pl gpT2T.genome.fna.repeatproteinmasker.annot TP.gff TP
   ## 04. TRF
-
+  
   ```
 #### - Annoation of protein coding genes
   ```
