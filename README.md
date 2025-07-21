@@ -197,7 +197,12 @@ In this study, we did not develop new software; thus, we provide example command
   rm -rf split_by_scaffold
   perl ./scripts/ConvertRepeatMasker2gff.pl gpT2T.genome.fna.repeatproteinmasker.annot TP.gff TP
   ## 04. TRF
-  
+  perl ./scripts/split_fasta.pl gpT2T.genome.fna split_by_scaffold 5000000
+  for i in split_by_scaffold/*.fa; do i=`basename $i`; echo "cd `pwd`/split_by_scaffold; timeout 7200 trf $i 2 7 7 80 10 50 2000 -d -h; perl mod_trf_out.pl ${i}.2.7.7.80.10.50.2000.dat > ${i}.2.7.7.80.10.50.2000.dat.mod"; done > 02.split_run_trf.sh
+  ParaFly -CPU 50 -c 02.split_run_trf.sh
+  find ./split_by_scaffold -name "*.dat.mod" | xargs cat  > gpT2T.genome.fna.2.7.7.80.10.50.2000.dat
+  rm -rf split_by_scaffold
+  perl ./scripts/ConvertTrf2Gff.pl gpT2T.genome.fna.2.7.7.80.10.50.2000.dat TRF.gff
   ```
 #### - Annoation of protein coding genes
   ```
