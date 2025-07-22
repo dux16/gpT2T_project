@@ -417,6 +417,32 @@ done
   ```
 #### - Composit Elements
   ```
+  ## dotplot generate via gepard
+java -cp Gepard-2.1.jar org.gepard.client.cmdline.CommandLine -seq ${chr}.fasta -matrix edna.mat -maxwidth 1250 -maxheight 1250 -word 50 -from1 ${start} -to1 ${end} -from2 ${start} -to2 ${end} -format bmp -outfile ${chr}_50.bmp
+
+  ## The unannotated regions are found via dotplot and the following region is used as motif to run Repeatmasker
+  ## chr1_hap2	106808338	106890009
+  ## chr3_hap2	87393465	87670972
+  ## chr17_hap2	13358594	14460267
+  ## chr18_hap2	43963293	44006075
+  ## chr20_hap2	27092662	27525483
+  RepeatMasker -pa 10 -lib gp_assembly.fasta -s -gff -dir repeatlib ./motif.potential.fasta
+
+  ## filter the resulting Repeatmasker out file. 
+  awk 'OFS="\t"{if(NR>3)if(NF==16){print $0}else {print $0"."}}' gp_assembly.fasta.out | awk 'OFS="\t" {if($9=="+"){print $5,$6-1,$7,$10,100-$2,$9,$16} else {print $5,$6-1,$7,$10,100-$2,"-",$16}}' | sort -k4,4 | join -1 4 - motif.length | awk 'OFS="\t" {if($5 >= 95) print $2,$3,$4,$1,$5,$6,$7,$8,($4-$3)/$8}' | awk 'OFS="\t" {if($4 == "poten_4" && ($3-$2) > 7000){print $1,$2,$3,$4,$5,$6,$7,$8,$9} else if($4 == "poten_3" && $3-$2> 9000){print $1,$2,$3,$4,$5,$6,$7,$8,$9} else if($9>0.4 && $4 != "poten_4" && $4 != "poten_3") {print $1,$2,$3,$4,$5,$6,$7,$8,$9}}'> potential_comp.len_over80.bed
+  awk 'OFS="\t" {print $1":"$4,$2,$3}' potential_comp.len_over80.bed | sort -k1,1 -k2,2n |bedtools merge -i - -d 1500 | awk 'OFS="\t"{print $0,$3-$2}' | sed 's/:/\t/g' | awk 'OFS="\t" {print $1,$3,$4,$2,$4-$3}'> test.merge.bed
+  awk 'OFS="\t"{if(NR>3)if(NF==16){print $0}else {print $0"."}}' gp_mat.v0.4.6.polish2.fasta.out | awk 'OFS="\t" {if($9=="+"){print $5,$6-1,$7,$10,100-$2,$9,$16,$12,$13,$14} else {print $5,$6-1,$7,$10,100-$2,"-",$16,$14,$13,$12}}' | sort -k4,4 -k1,1V > potential_comp.all.bed
+  bedtools subtract -a potential_comp.all.bed -b gp_mat.rp_r1-r2.bed -f 0.8 -A | awk '$5 > 90 '| sort -k4,4 -k1,1V -k2,2n > check.bed
+
+  ## filter comp_TE1 Repeatmasker result seperately.
+  awk 'OFS="\t"{if(NR>3)if(NF==16){print $0}else {print $0"."}}' gp_assembly.fasta.out | awk 'OFS="\t" {if($9=="+"){print $5,$6-1,$7,$10,100-$2,$9,$12,$13,$16} else {print $5,$6-1,$7,$10,100-$2,"-",$14,$13,$16}}' | sort -k4,4 | join -1 4 - motif.length | awk 'OFS="\t" {if($5>90 && $1 == "poten_4") print $2,$3,$4,$1,$5,$6,$7,$8,$9,$10}' > potent4_extend.bed
+  sort -k1,1V -k2,2n potent4_extend.bed | bedtools merge -i - -d 2000 | awk '$3-$2> 10000' |bedtools subtract -a - -b potential_comp.region.back.bed -N -f 0.9 | awk 'OFS="\t" {print $1,$2,$3,"poten4_"NR,$3-$2}' | bedtools intersect -a - -b ../../../r2/centromere_region/mat.cen_ext.v1.bed -wa > poten4.addition.bed 
+  bedtools intersect -a poten4.addition.bed -b potent4_extend.bed -wo | awk 'OFS="\t"{print $4,$12,$13}' > motif.info.bed
+  cut -f1 motif.info.bed | sort | uniq |awk 'OFS="\t" {print $1,"0","10742"}' > motif.siminfo.bed
+  bedtools coverage -a motif.siminfo.bed -b motif.info.bed | awk '$7 > 0.8' | cut -f1 > conserve.ids
+  grep -wf conserve.ids poten4.addition.bed > poten4.check.bed
+
+  ## Final interval is manully determined from check.bed and poten4.check.bed
   ```
 ### - Y Chromosome Analysis
 #### - Y chromosome structure analysis
