@@ -227,9 +227,9 @@ bash run_GeMoMa.sh
   ## RNA-seq annotation
   
   ## Ab initio prediction
-  
-  ## EVM
   ```
+> ##### Intergrating these results
+  The [EVidenceModeler](https://github.com/EVidenceModeler/EVidenceModeler) was used to combine these gff3 files derived from three level evidences.
 
 ### - Genomic Analyses
 #### - Heterozygous Variant Analyses
@@ -541,59 +541,64 @@ perl Construct_Ancestor_Genome.pl AME.feature.bed AME.genome.fna Ancestor.fasta
 ```
 ### - Y Chromosome Analysis
 #### - Y chromosome structure analysis
-  ```
   a. PAR bundary && X-Degenerate
-   #lastZ X-Y alignment
-    lastZ chrX.fa chrY.fa --ungapped --filter=identity:80 --filter=nmatch:400 --hspthresh=36400 --format=general-:name1,start1,end1,name2,start2,end2,strand2,nmatch >GPchrX2chrY.anchors
-    lastZ --segments=GPchrX2chrY.anchors --filter=identity:80 --filter=nmatch:1000 --allocate:traceback=800M --format=general:name1,zstart1,end1,name2,strand2,zstart2+,end2+,nmatch,length1,id%,blastid% --rdotplot+score=GPchrX2chrY.dots | perl -alne 'if($F[4] eq "-"){($F[1], $F[2]) = ($F[2], $F[1])} print join "\t", @F'  >GPchrX2chrY.txt
-   #mummer X-Y alignment & SyRI structure variants
-    nucmer chrX.fa chrY.fa
-    delta-filter -m -i 90 -l 100 out.delta >out.filter.delta
-    show-coords -THrd out.filter.delta >out.filter.coords
-    syri -c out.filter.coords -d out.filter.delta -r chrX.fa -q chrY.fa
-  b.Ampliconic
-   #LastZ self-alignment
-    lastz chrY_softmask.fasta chrY_softmask.fasta --ungapped --filter=identity:80 --filter=nmatch:400 --hspthresh=36400 --format=general-:name1,start1,end1,name2,start2,end2,strand2,nmatch > chrY2chrY.anchors
-    lastz chrY_softmask.fasta chrY_softmask.fasta --segments=GPchrY2chrY.anchors --filter=identity:80 --filter=nmatch:1000 --allocate:traceback=800M --format=general:name1,zstart1,end1,name2,strand2,zstart2+,end2+,nmatch,length1,id%,blastid% --rdotplot+score=chrY2chrY.dots > chrY2chrY.dat
-    perl -lane 'if($F[4] eq "-"){($F[1], $F[2]) = ($F[2], $F[1])} $out=join("\t", @F); print $out' chrY2chrY.dat > chrY2chrY.dat.mod
-    Rscript dotplot.X_ref.r chrY_softmask.fasta.fai chrY_softmask.fasta.fai chrY2chrY.dat.mod chrY_class.bed chrY2self_lastz_dotplot.pdf
-  #blastn  self-alignment
-    bedtools maskfasta -fi chrY.fa -bed chrY_hardmask.bed -fo chrY.hardmask.fasta
-    seqtk subseq chrY.hardmask.fasta $MSY > MSY_hardmask.fasta
-    makeblastdb -in MSY_hardmask.fasta -parse_seqids -dbtype nucl -out db/MSY
-    samtools faidx MSY_hardmask.fasta
-    awk -v OFS='\t' {'print $1,$2'} MSY_hardmask.fasta.fai > genome.txt
-    bedtools makewindows -g genome.txt -w 5000 -s 2000 -i srcwinnum > genome.windows.w5ks2k.bed
-    bedtools getfasta -fi MSY_hardmask.fasta -bed genome.windows.w5ks2k.bed > genome.windows.w5ks2k.fasta
-    blastn -query genome.windows.w5ks1k.fasta -db db/MSY -outfmt 6 -perc_identity 50 -num_threads 32 -out merged_w5ks2k.blastn.outfmt6.txt
-    perl -alne 'print if($F[3]>=2000)' merged_w5ks1k.blastn.outfmt6.txt > merged_w5ks2k.blastn.outfmt6.flt.txt
-    Rscript createBedFileFromBlastn.R merged_w5ks2k.blastn.outfmt6.flt.txt
-    bedtools merge -i merged_w5ks2k.blastn.outfmt6.flt.bed -d 1 -c 4 -o mean > merged_w5ks2k.blastn.outfmt6.flt.merged.bed
-    bedGraphToBigWig merged_w5ks2k.blastn.outfmt6.flt.merged.bed chrY.len merged_w5ks2k.blastn.outfmt6.flt.merged.bw
+  ```
+  ## lastZ X-Y alignment
+  lastZ chrX.fa chrY.fa --ungapped --filter=identity:80 --filter=nmatch:400 --hspthresh=36400 --format=general-:name1,start1,end1,name2,start2,end2,strand2,nmatch >GPchrX2chrY.anchors
+  lastZ --segments=GPchrX2chrY.anchors --filter=identity:80 --filter=nmatch:1000 --allocate:traceback=800M --format=general:name1,zstart1,end1,name2,strand2,zstart2+,end2+,nmatch,length1,id%,blastid% --rdotplot+score=GPchrX2chrY.dots | perl -alne 'if($F[4] eq "-"){($F[1], $F[2]) = ($F[2], $F[1])} print join "\t", @F'  >GPchrX2chrY.txt
+  ## mummer X-Y alignment & SyRI structure variants
+  nucmer chrX.fa chrY.fa
+  delta-filter -m -i 90 -l 100 out.delta >out.filter.delta
+  show-coords -THrd out.filter.delta >out.filter.coords
+  syri -c out.filter.coords -d out.filter.delta -r chrX.fa -q chrY.fa
+  ```
+b.Ampliconic
+ ```
+ ## LastZ self-alignment
+ lastz chrY_softmask.fasta chrY_softmask.fasta --ungapped --filter=identity:80 --filter=nmatch:400 --hspthresh=36400 --format=general-:name1,start1,end1,name2,start2,end2,strand2,nmatch > chrY2chrY.anchors
+ lastz chrY_softmask.fasta chrY_softmask.fasta --segments=GPchrY2chrY.anchors --filter=identity:80 --filter=nmatch:1000 --allocate:traceback=800M --format=general:name1,zstart1,end1,name2,strand2,zstart2+,end2+,nmatch,length1,id%,blastid% --rdotplot+score=chrY2chrY.dots > chrY2chrY.dat
+ perl -lane 'if($F[4] eq "-"){($F[1], $F[2]) = ($F[2], $F[1])} $out=join("\t", @F); print $out' chrY2chrY.dat > chrY2chrY.dat.mod
+ Rscript dotplot.X_ref.r chrY_softmask.fasta.fai chrY_softmask.fasta.fai chrY2chrY.dat.mod chrY_class.bed chrY2self_lastz_dotplot.pdf
+ ## blastn  self-alignment
+ bedtools maskfasta -fi chrY.fa -bed chrY_hardmask.bed -fo chrY.hardmask.fasta
+ seqtk subseq chrY.hardmask.fasta $MSY > MSY_hardmask.fasta
+ makeblastdb -in MSY_hardmask.fasta -parse_seqids -dbtype nucl -out db/MSY
+ samtools faidx MSY_hardmask.fasta
+ awk -v OFS='\t' {'print $1,$2'} MSY_hardmask.fasta.fai > genome.txt
+ bedtools makewindows -g genome.txt -w 5000 -s 2000 -i srcwinnum > genome.windows.w5ks2k.bed
+ bedtools getfasta -fi MSY_hardmask.fasta -bed genome.windows.w5ks2k.bed > genome.windows.w5ks2k.fasta
+ blastn -query genome.windows.w5ks1k.fasta -db db/MSY -outfmt 6 -perc_identity 50 -num_threads 32 -out merged_w5ks2k.blastn.outfmt6.txt
+ perl -alne 'print if($F[3]>=2000)' merged_w5ks1k.blastn.outfmt6.txt > merged_w5ks2k.blastn.outfmt6.flt.txt
+ Rscript createBedFileFromBlastn.R merged_w5ks2k.blastn.outfmt6.flt.txt
+ bedtools merge -i merged_w5ks2k.blastn.outfmt6.flt.bed -d 1 -c 4 -o mean > merged_w5ks2k.blastn.outfmt6.flt.merged.bed
+ bedGraphToBigWig merged_w5ks2k.blastn.outfmt6.flt.merged.bed chrY.len merged_w5ks2k.blastn.outfmt6.flt.merged.bw
   ```
 #### - Composite Element Identification
-  ```
   a. Moddotplot:
-   for i in {5,10,20,40,60,80,100,120,140,150};do Wind=` exprt $i * 1000 `; moddotplot static -c config.json -w $Wind -o modeplot_${i}k;done
+  ```
+  for i in {5,10,20,40,60,80,100,120,140,150};do Wind=` exprt $i * 1000 `; moddotplot static -c config.json -w $Wind -o modeplot_${i}k;done
+  ```
+
   b. Composite element
-    ###annotation Composite element
-     cat gpT2T_v1.0.genome.gff3 gpT2T_chrY_v1.0_final_pseudogenes.gff3  |awk '$3=="mRNA" && $1=="chrY"' >chrY_gene_pseodogene.gff
-     awk '$1=="chrY"' GiantPanda.filteredRepeats.gff >chrY_repeat.gff
-     cat chrY_gene_pseodogene.gff chrY_repeat.gff | awk '($4>=16262172 && $5<=20643784)||($4>=23249031 && $5<=39199034)||($4>=40012893 && $5<=45522213)||($4>=46436979)' |grep -E -w "LINE/L1|Satellite|Unknown|LTR/ERV1|mRNA"|sort -k4,4n >SDR_repeat_gene.gff
-     awk '$3=="mRNA"' SDR_repeat_gene.gff |awk '{$1"\t"$4-1"\t"$5}' |sort -k2,2n |bedtools merge -i - -d 30000|awk '{print $1"\t"$2-50000"\t"$3+50000}'  >merge.region.bed
-     awk '{if($3!="mRNA")print $1"\t"$4-1"\t"$5"\t"$7"\t"$3}' SDR_repeat_gene.gff >tmp1.bed
-     awk -F "[\t=;]" '{if($3=="mRNA")print $1"\t"$4-1"\t"$5"\t"$7"\t"$NF}' >tmp2.bed
-     cat tmp1.bed tmp2.bed |sort -k2,2n >tmp3.bed
-     bedtools intersect -a tmp3.bed -b merge.region.bed -wa -wb >merge.region.intersect.bed
-     python Class_Composite_element_mod.py merge.region.intersect.bed model.stat.bed
-    ####Composite element phylogeny
-     awk -F "[\t:-] "'{print $1"\t"$2"\t"$3}' model.stat.bed >region.bed
-     bedtools getfasta -fi chrY.fa -bed region.bed >region.bed.fa
-     samtools faidx chrY.fa chrY:470063453-47127767 >ref.fa
-     ViralMSA.py -s region.bed.fa -r ref.fa -o viral_output -e test
-     trimal -sgc -in region.bed.removeRef.fasta.aln >region.bed.removeRef.fasta.aln.stat
-     trimal -gt 0.5 -in region.bed.removeRef.fasta.aln> region.bed.removeRef.fasta.trimal_0.5.aln.fasta
-     raxml-ng -msa region.bed.removeRef.fasta.aln.rename.trimal_0.5.fasta --model GTR+G
+  ```
+  ### annotation Composite element
+  cat gpT2T_v1.0.genome.gff3 gpT2T_chrY_v1.0_final_pseudogenes.gff3  |awk '$3=="mRNA" && $1=="chrY"' >chrY_gene_pseodogene.gff
+  awk '$1=="chrY"' GiantPanda.filteredRepeats.gff >chrY_repeat.gff
+  cat chrY_gene_pseodogene.gff chrY_repeat.gff | awk '($4>=16262172 && $5<=20643784)||($4>=23249031 && $5<=39199034)||($4>=40012893 && $5<=45522213)||($4>=46436979)' |grep -E -w "LINE/L1|Satellite|Unknown|LTR/ERV1|mRNA"|sort -k4,4n >SDR_repeat_gene.gff
+  awk '$3=="mRNA"' SDR_repeat_gene.gff |awk '{$1"\t"$4-1"\t"$5}' |sort -k2,2n |bedtools merge -i - -d 30000|awk '{print $1"\t"$2-50000"\t"$3+50000}'  >merge.region.bed
+  awk '{if($3!="mRNA")print $1"\t"$4-1"\t"$5"\t"$7"\t"$3}' SDR_repeat_gene.gff >tmp1.bed
+  awk -F "[\t=;]" '{if($3=="mRNA")print $1"\t"$4-1"\t"$5"\t"$7"\t"$NF}' >tmp2.bed
+  cat tmp1.bed tmp2.bed |sort -k2,2n >tmp3.bed
+  bedtools intersect -a tmp3.bed -b merge.region.bed -wa -wb >merge.region.intersect.bed
+  python Class_Composite_element_mod.py merge.region.intersect.bed model.stat.bed
+  #### Composite element phylogeny
+  awk -F "[\t:-] "'{print $1"\t"$2"\t"$3}' model.stat.bed >region.bed
+  bedtools getfasta -fi chrY.fa -bed region.bed >region.bed.fa
+  samtools faidx chrY.fa chrY:470063453-47127767 >ref.fa
+  ViralMSA.py -s region.bed.fa -r ref.fa -o viral_output -e test
+  trimal -sgc -in region.bed.removeRef.fasta.aln >region.bed.removeRef.fasta.aln.stat
+  trimal -gt 0.5 -in region.bed.removeRef.fasta.aln> region.bed.removeRef.fasta.trimal_0.5.aln.fasta
+  raxml-ng -msa region.bed.removeRef.fasta.aln.rename.trimal_0.5.fasta --model GTR+G
   ```
 #### - ERV1 Analysis
   ```
@@ -655,9 +660,7 @@ python runmutliz.py #revise path and parameter based on your data
 
 for i in `seq 1 20` X Y; do echo "sh Chr$i/multiz.sh"; done >command_multiz.list
 
-perl ../../easy_submit.pl -ss SLURM -m 15G -t 5 -p normal -s yes -l 1 command_multiz.list  #This step is for submitting commands to the cluster; if you don't have a cluster, you can skip it.
-
-#ParaFly -c command_split_maf.list -CPU 22
+perl /xxx/easy_submit.pl -ss SLURM -m 15G -t 5 -p normal -s yes -l 1 command_multiz.list  #This step is for submitting commands to the cluster; if you don't have a cluster, you can skip it.
 ```
 > ##### Getting Orthologous genes
 > ##### 2. MaftoGene
@@ -1110,5 +1113,4 @@ awk '{if ($1 == "GENE" && $3 == "L" || $3 == "UL") print $0 }' AME_Chr*/loss_sum
 grep -Fxv -f <(cat CLU_loss.txt  FCA_loss.txt  UMA_loss.txt  NSC_loss.txt MER_loss.txt | sort -u) AME_loss.txt > AME_uniq_loss.txt
 ```
 #### - Functional Enrichment Analysis
-  ```
-  ```
+We conducted the functional enrichment analysis using the [Metascape](https://metascape.org/).
