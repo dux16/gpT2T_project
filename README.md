@@ -220,8 +220,8 @@ In this study, we did not develop new software; thus, we provide example command
   perl ./scripts/ConvertTrf2Gff.pl gpT2T.genome.fna.2.7.7.80.10.50.2000.dat TRF.gff
   ```
 #### - Annoation of protein coding genes
+> ##### Homology-based prediction
   ```
-  ## Homology-based prediction
   for i in cat cattle dog giant_panda horse human pig polar_bear;
   do
   echo "java -Xmx150g -jar /xxx/GeMoMa-1.9.jar CLI GeMoMaPipeline threads=50 AnnotationFinalizer.r=NO pc=true o=true t=/xxx/chimeric_genome/gpT2T.genome.fna GAF.a=\"iAA>=0.75\" i=$i a=/xxx/z.homology_species/${i}.genome.gff g=/xxx/z.homology_species/${i}.genome.fna outdir=/xxx/$i GeMoMa.m=500000; perl ./scripts/ConvertFormat_GeMoMa.pl /xxx/$i/final_annotation.gff"
@@ -238,16 +238,24 @@ In this study, we did not develop new software; thus, we provide example command
 bash run_GeMoMa.sh
 " > GeMoMa_sbatch.sh
   sbatch GeMoMa_sbatch.sh
-  ## RNA-seq annotation
-  ### preparing the cleaned reads using fastp with deafalut paramaters.
-  # The name format of read files: tissue_name_R1.fastq.gz, tissue_name_R2.fastq.gz.
-  perl ./scripts/RNAseq_annot_pipe.pl -fd /xxx/bulk_RNAseq_clean_reads -fl FL_RNAseq_hq.fasta -et submit -at blat,gmap,minimap2 -g gpT2T.genome.fna -s gpT2T -gg -t 64
-  ## Ab initio prediction
-  ### augustus
-  
-  ### braker3
-  
+```
+> ##### RNA-seq annotation
   ```
+  ## preparing the cleaned reads using fastp with deafalut paramaters.
+  ## The name format of read files: tissue_name_R1.fastq.gz, tissue_name_R2.fastq.gz.
+  perl ./scripts/RNAseq_annot_pipe.pl -fd /xxx/bulk_RNAseq_clean_reads -fl FL_RNAseq_hq.fasta -et submit -at blat,gmap,minimap2 -g gpT2T.genome.fna -s gpT2T -gg -t 64
+  ```
+> ##### Ab initio prediction
+The ConvertFormat_augustus.pl for format conversion can be found [here](https://github.com/wk8910/bio_tools/blob/master/33.merge_gff/ConvertFormat_augustus.pl).
+```
+  ## augustus
+  augustus --species=human genome_sequence.fa | perl ConvertFormat_augustus.pl - genome_sequence.fa.gff
+  augustus --species=Amel genome_sequence.fa | perl ConvertFormat_augustus.pl - genome_sequence.fa.gff
+  ## braker3
+  singularity exec -B ${PWD}:${PWD} ${BRAKER_SIF} braker.pl --species=Amel --genome=gpT2T.genome.softmask.fna --bam=merged_sorted.bam --softmasking --workingdir=`pwd`/braker_results --GENEMARK_PATH=${ETP}/gmes --threads 48 --gm_max_intergenic 500000 --prot_seq=swissprot-20231225-mammalia.fasta --gff3
+  ## genescan
+  genscan /xxx/genscan/HumanIso.smat genome_sequence.fa | ./scripts/ConvertFormat_genscan.pl - > genome_sequence.fa.gff
+```  
 > ##### Intergrating these results
   The [EVidenceModeler](https://github.com/EVidenceModeler/EVidenceModeler) was used to combine these gff3 files derived from three level evidences.
 
@@ -346,19 +354,13 @@ bash run_GeMoMa.sh
   bedtools intersect -a gpT2T_annot_v2.0_PCGs.gff3 -b <(grep QIN result.bed) -u -wa | awk '{OFS="\t";print $1,$4,$5,$9}' | awk '{for (i=1; i<=NF; i++) if ($i ~ /Name=/) {sub(/;.*$/, "", $i); split($i, a, "="); print a[2]}}' > QIN_sub_genes.list
   ```
 #### - Estimation of *De Novo* Mutations
-  ```
-  
-  ```
-
+Methods and code as described [Lucie et al., 2021]](https://github.com/lucieabergeron/germline_mutation_rate).
 ### - Centromere Analysis
 #### - Centromere prediction
-  ```
-  mkdir tmp
-
+```
+mkdir tmp
 ## run trf to find 
 trf gp_assembly.fasta 4 7 7 80 10 500 2000 -d -h
-
-
 ## transform dat to bed
 awk 'BEGIN{chr=""; OFS="\t"} {if($1 == "Sequence:") {chr=$2} else if(NF==15){print chr,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15}}' gp_assembly.fasta.4.7.7.80.10.500.2000.dat | awk 'OFS="\t"{print $1,$2,$3,"repeat_"NR,$9,$4,$5,$6,$7,$8,$10,$11,$12,$13,$14,$15}'> pandas.over5k.bed 
 
@@ -401,9 +403,9 @@ python3 fastaKit.py -exl tmp/dup.r3.ids tmp/pandas_repeat.rmdup.r2.rmsub.fasta >
 
 ## re-align the motif to assembly
 RepeatMasker -pa 25 -cutoff 100 -lib pandas.over5k.no_overlap.idover70.rmdup.rmsub.r3.fasta -s -nolow -gff -dir repeatmasker gp_assembly.fasta
-  ```
+```
 #### - HOR Detection
-  ```
+```
 ## generate hicat HOR annotation. hor_region.bed contain records of the Sat_556 arrays and mask.bed contain records of non-Sat_556 motifs (include TE and composite element) annotations, mon.fasta is a SAT_556 motif
 cat "hor_region.bed" | while read a; do
     chr=`echo $a | cut -f 1 -d " "`
@@ -435,7 +437,7 @@ pos=`echo $name | cut -f2,3 -d "."`
 grep -v NNNNNNNNNNNNNNNNN $a > ${chrom}.span100000.k17.mincount30.bin1.txt
 Rscript NTRprism_PlotSpectrum.r --args chrX.span100000.k17.mincount30.bin1.txt $pos 10000 $chrom
 done
-  ```
+```
 #### - Composit Elements
   ```
   ## dotplot generate via gepard
@@ -490,7 +492,7 @@ chainNet/
     ├── FCA   # query species
 #Copy chain and Net files
 mkdir -p chainNet/AME/CLU/chain chainNet/AME/CLU/net
-for i in `seq 1 20` X; do cp /work1/fanhzh/project/gp_project/2.karyotype/1.lastz/Chr$i/*CLU.simple.genome/4.chaincleaner/all_clean.chain chainNet/AME/CLU/chain/chr${i}.chain; cp /work1/fanhzh/project/gp_project/2.karyotype/1.lastz/Chr$i/*CLU.simple.genome/7.netfilter/target.filtered.net chainNet/AME/CLU/net/chr${i}.net; done
+for i in `seq 1 20` X; do cp /xxx/2.karyotype/1.lastz/Chr$i/*CLU.simple.genome/4.chaincleaner/all_clean.chain chainNet/AME/CLU/chain/chr${i}.chain; cp /xxx/2.karyotype/1.lastz/Chr$i/*CLU.simple.genome/7.netfilter/target.filtered.net chainNet/AME/CLU/net/chr${i}.net; done
 
 #tree.txt (timetree,The function of @ is to mark ancestral branches)
 vi tree.txt
@@ -501,17 +503,17 @@ vi tree.txt
 
 > #### Run DESCHRAMBLER
 
-```bash
-perl ~/Software/DESCHRAMBLER/DESCHRAMBLER.pl ./params.txt >DESCHRAMBLER.log 2>&1
+```
+perl /xxx/DESCHRAMBLER/DESCHRAMBLER.pl ./params.txt >DESCHRAMBLER.log 2>&1
 ```
 
 > #### Visualization
 
-```bash
+```
 python -m jcvi.graphics.chromosome AME.feature.bed APCF.idmap --size=AME.sizes
 ```
 
-```bash
+```
 # cat AME.feature.bed
 # Deal with APCF_AME.merged.map, reformatted as follows:
 chr18   13233350        19663033        APCF1
@@ -519,14 +521,14 @@ chr18   53277   12616899        APCF1
 chr18   19768604        25532631        APCF1
 ```
 
-```bash
+```
 # cat AME.sort.sizes
 chr10   114930382
 chr11   116659357
 chr1    203573159
 ```
 
-```bash
+```
 # cat APCF.idmap
 APCF1   1       #C56673
 APCF2   2       #D66B61
@@ -551,12 +553,12 @@ APCF20  20      #BF9E78
 APCF21  21      #AD8A6E
 ```
 > #### The way to obtain xxxx.feature.bed and xxxx.sizes
-```bash
+```
 grep APCF APCF_AME.merged.map > 1; grep chr APCF_AME.merged.map > 2; paste 2 1 > 3; awk '{print $1"\t"$2"\t"$3}' 3 > 4; sed -i "s/[.:-]/ /g" 4; sed -i "s/\t \t/\t-\t/g" 4 ; awk '{print $2"\t"$3"\t"$4"\t"$6$7"\t"$5}' 4 > AME.feature.bed; rm 1 2 3 4;
 awk '{print $1"\t"$2}' ../../../01.rawdata/genome/AME.genome.fna.fai > AME.sizes; sed -i "s/Chr/chr/g" AME.sizes
 ```
 > #### Reconstruct the ancestral chromosome sequence based on the correspondence of the bed file
-```perl
+```
 perl Construct_Ancestor_Genome.pl AME.feature.bed AME.genome.fna Ancestor.fasta
 ```
 ### - Y Chromosome Analysis
@@ -598,7 +600,6 @@ b.Ampliconic
   ```
   for i in {5,10,20,40,60,80,100,120,140,150};do Wind=` exprt $i * 1000 `; moddotplot static -c config.json -w $Wind -o modeplot_${i}k;done
   ```
-
   b. Composite element
   ```
   ### annotation Composite element
@@ -636,10 +637,6 @@ b.Ampliconic
 #### - Curation of Y chromosome coding genes and pseudogenes
 > ##### Protein-coding genes
    [IGV](https://github.com/igvteam/igv) was used to manually curate the protein genes annotations of Y chromosome, such as filter.
-  ```
-  perl -alne 'next if($F[0]=~/Amel\./);$h{$F[0]}++;if($h{$F[0]}==1){print if($F[5]/$F[2]>=0.6 and $F[9]/$F[3]>=0.6 and $F[4]>=30)}' gpAX2swissprot.blast6 |awk '{print $1}' -> HQ_gpAX_gene.list
-  
-  ```
 > ##### Pseudogenes
   ```
 # input files: swissprot-20231225-mammalia.fasta, gpT2T_annot_v2.0.gff3, gp_annot_v2.pep.fa, chrY_softmask.fna
@@ -667,22 +664,44 @@ perl ~/tools/filter_annotation/06.merge_sort_gff.pl gpT2T_HQ2chrY.gff3 > gpT2T_H
 awk '{print $4}' chrY_final_pseudogenes_rename.bed | perl ~/tools/filter_annotation/z.extract_gff_baseName.pl gpT2T_HQ2chrY_formated.sorted.gff3 - m > chrY_final_pseudogenes.gff3
   ```
 #### - The species-species divergence calculation of giant panda and brown bear
-  ```
-  ```
+  The detailed methods can be found [here](https://wgdi.readthedocs.io/en/latest/usage.html).
 #### - The analysis of autosomal transposition
-  ```
-  ```
+We identified the transposition event from chr13 to chrY through the SYCP2 gene, and then expanded the region near this gene on the autosomal chromosome to extract synteny block with the Y chromosome.
+```
+## chr13 vs three SYCP2 regions in chrY
+lastz chr13_transposed_region.fna chrY_transpose1.fna --ungapped --filter=nmatch:400 --hspthresh=36400 --format=general-:name1,start1,end1,name2,start2,end2,strand2,nmatch > GPchrY2auto1.anchor
+lastz chr13_transposed_region.fna chrY_transpose1.fna --segments=GPchrY2auto1.anchor --filter=nmatch:1000 --allocate:traceback=800M --format=general:name1,zstart1,end1,name2,strand2,zstart2+,end2+,nmatch,length1,id%,blastid% --rdotplot+score=GPchrY2auto1.dots > GPchrY2auto1.dat
+lastz chr13_transposed_region.fna chrY_transpose2.fna --ungapped --filter=nmatch:400 --hspthresh=36400 --format=general-:name1,start1,end1,name2,start2,end2,strand2,nmatch > GPchrY2auto2.anchor
+lastz chr13_transposed_region.fna chrY_transpose2.fna --segments=GPchrY2auto2.anchor --filter=nmatch:1000 --allocate:traceback=800M --format=general:name1,zstart1,end1,name2,strand2,zstart2+,end2+,nmatch,length1,id%,blastid% --rdotplot+score=GPchrY2auto2.dots > GPchrY2auto2.dat
+lastz chr13_transposed_region.fna chrY_transpose3.fna --ungapped --filter=nmatch:400 --hspthresh=36400 --format=general-:name1,start1,end1,name2,start2,end2,strand2,nmatch > GPchrY2auto3.anchor
+lastz chr13_transposed_region.fna chrY_transpose3.fna --segments=GPchrY2auto3.anchor --filter=nmatch:1000 --allocate:traceback=800M --format=general:name1,zstart1,end1,name2,strand2,zstart2+,end2+,nmatch,length1,id%,blastid% --rdotplot+score=GPchrY2auto3.dots > GPchrY2auto3.dat
+```
+Then, we used the jcvi (https://github.com/tanghaibao/jcvi) to visualize.
 #### - Gene conversion detection
-  ```
-  ```
+The [GNENCONV](https://www.math.wustl.edu/~sawyer/geneconv/) was conducted to detect the gene conversion events in Y chromosome of giant panda.
+  ···
+  # cat AMELX.config
+  #GCONV_CONFIG
+  -Startseed=123   -MaxSimGlobalPval=0.05
+  -group CARNI catAMELX dogAMELX bbAMELX bbAMELY ebAMELX ebAMELY gpAMELX gpAMELY
+  -group PRIMATES humanAMELX humanAMELY macaqueAMELX macaqueAMELY marmosetAMELX
+  -group CETART pigAMELX pigAMELY cattleAMELX
+  -group EQUIDS horseAMELX horseAMELY
+  -group RODENTS mouseAmelx
+  -group OUT platypusAMELX
+  ···
 #### - The transcriptome analysis of Y chromosome genes
-  ```
-  ```
+> ##### Bulk RNAseq data
+The methods of read counts and normolization was descripted by [Godfrey et al., 2020](https://doi.org/10.1101/gr.261248.120).
+```
+## calculating the Tau index score
+perl ./scripts/cal_tau_value.pl -i MSY_final_TPM.txt -o MSY_Tau.txt -r 1
+```
+> ##### Iso-seq data
+We used the [IsoSeq](https://github.com/PacificBiosciences/IsoSeq) pipeline, [TAMA](https://github.com/GenomeRIK/tama), and [TransDecoder](https://github.com/TransDecoder/TransDecoder) to obtain the potential isoforms for SYCP2 gene. 
 ### - Comparative Genomic Analysis
 #### - Orthologous Genes Identification
 > ##### Whole genome alignment
-# Whole genome alignment pipeline
-
 > ##### 1. Before running the process, it is necessary to simplify the processing of genomic files and GFF files, extract chromosomes and simplify chromosome names(Chr*), and extract the longest transcript.
 
 > ##### 2. Preparation of the directory and scripts before the whole genome alignment.
@@ -713,7 +732,7 @@ for i in `seq 1 20` X Y; do echo "sh Chr$i/multiz.sh"; done >command_multiz.list
 perl /xxx/easy_submit.pl -ss SLURM -m 15G -t 5 -p normal -s yes -l 1 command_multiz.list  #This step is for submitting commands to the cluster; if you don't have a cluster, you can skip it.
 ```
 > ##### Getting Orthologous genes
-> ##### 2. MaftoGene
+> ##### 4. MaftoGene
 
 ```bash
 mkdir genes
@@ -730,30 +749,30 @@ perl /xxx/easy_submit.pl -ss SLURM -m 15G -t 1 -p normal -s yes -l 1 maf2gene.sh
 perl /xxx/easy_submit.pl -ss SLURM -m 15G -t 1 -p normal -s yes -l 1 lst2gene.sh
 ```
 
-> ##### 3. Filtergenes
+> ##### 5. Filtergenes
 
 ```bash
 perl ./scripts/filter_genes_base_gap.pl genes gene HSA,BTA,MPE HSA 0.2
 ```
 
-> ##### 4. MACSE alignment
+> ##### 6. MACSE alignment
 
 ```bash
 ls genes/*.fas > genelist; sed -i 's/\.fas//g' genelist
 
 mkdir align_AA align_NT
 
-cat genelist | while read line; do echo "java -jar -Xmx20G /work1/fanhzh/project/gp_project/software/macse_v2.07.jar -prog alignSequences -seq align/${line}.fas -gap_op -7 -gap_ext -1 -fs -30 -gc_def 1 -stop -100 -out_AA align_AA/${line}_AA.fas -out_NT align_NT/${line}_NT.fas";done > run_alignment.sh
+cat genelist | while read line; do echo "java -jar -Xmx20G /xxx/software/macse_v2.07.jar -prog alignSequences -seq align/${line}.fas -gap_op -7 -gap_ext -1 -fs -30 -gc_def 1 -stop -100 -out_AA align_AA/${line}_AA.fas -out_NT align_NT/${line}_NT.fas";done > run_alignment.sh
 
 ParaFly -c run_alignment.sh -CPU 30
 ```
 
-> ##### 5. MACSE export
+> ##### 7. MACSE export
 
 ```bash
 mkdir stats align_AA_filter align_NT_filter
 
-cat genelist | while read line; do echo "java -jar -Xmx600m /work1/fanhzh/project/gp_project/software/macse_v2.07.jar -prog exportAlignment -align align_NT/${line}_NT.fas -cons_threshold 0.7 -codonForFinalStop --- -codonForInternalStop NNN -codonForExternalFS --- -codonForInternalFS NNN -charForRemainingFS - -out_NT align_NT_filter/${line}_noFS_NT.fasta -out_AA align_AA_filter/${line}_noFS_AA.fasta -out_stat_per_seq stats/${line}_stats.csv"; done > exportAlignment.sh
+cat genelist | while read line; do echo "java -jar -Xmx600m /xxx/software/macse_v2.07.jar -prog exportAlignment -align align_NT/${line}_NT.fas -cons_threshold 0.7 -codonForFinalStop --- -codonForInternalStop NNN -codonForExternalFS --- -codonForInternalFS NNN -charForRemainingFS - -out_NT align_NT_filter/${line}_noFS_NT.fasta -out_AA align_AA_filter/${line}_noFS_AA.fasta -out_stat_per_seq stats/${line}_stats.csv"; done > exportAlignment.sh
 
 ParaFly -c exportAlignment.sh -CPU 30
 ```
@@ -818,7 +837,7 @@ perl ../scripts/paml_scripts/05.collect.paml.Branchsite.pl ./run_paml
 ```bash
 # Copy
 mkdir 0.maf
-for i in `seq 1 22` X; do cp /work1/fanhzh/project/gp_project/1.CNE/1.multiz/Chr$i/tmp.17.maf 0.maf/Chr$i.maf; done
+for i in `seq 1 22` X; do cp /xxx/1.CNE/1.multiz/Chr$i/tmp.17.maf 0.maf/Chr$i.maf; done
 # Filter the .maf file according to the score and reference
 mkdir 1.maf_filter
 for i in `seq 1 22` X; do echo "mafFilter -minScore=20000 -needComp=HSA -overlap  0.maf/Chr$i.maf > 1.maf_filter/Chr$i.filter.maf"; done > 01.filter.sh
@@ -951,17 +970,17 @@ cat CNEs.filter.bed | awk 'BEGIN{sum=0}{sum += $4}END{print sum}'
 
 > ##### PART TWO: The pipeline for ForwardGenomics
 
-```````bash
+```bash
 # ForwardGenomics
 # create binary files for each genome
 mkdir 0.2bit
-ls /work1/fanhzh/project/gp_project/0.genome/simple/*.fa > genome.list
+ls /xxx/0.genome/simple/*.fa > genome.list
 for i in `cat genome.list`; do root=`basename $i .genome.fa`;echo "mkdir 0.2bit/${root}; faToTwoBit $i 0.2bit/${root}/${root}.2bit";done > work.sh
 perl easy_submit.pl -ss SLURM -t 1 -m 10G -l 1 -s yes -p work.sh
 
 # deal maf file
 mkdir 1.mafAddIRows
-for i in /work1/fanhzh/project/gp_project/1.CNE/2.deal_maf/02.maf_sort/*.maf; do root=`basename $i .sort.maf`; echo "mafAddIRows $i 0.2bit/HSA/HSA.2bit 1.mafAddIRows/${root}.addI.maf";done > addI.sh
+for i in /xxx/1.CNE/2.deal_maf/02.maf_sort/*.maf; do root=`basename $i .sort.maf`; echo "mafAddIRows $i 0.2bit/HSA/HSA.2bit 1.mafAddIRows/${root}.addI.maf";done > addI.sh
 
 faSize -detailed HSA.genome.fna > HSA.chrom.sizes
 for i in 1.mafAddIRows/*.maf; do root=`basename $i`;echo "~/Software/TOGA/CESAR2.0/tools/mafIndex $i 1.mafAddIRows/${root}.bb chromSizes=HSA.chrom.sizes";done > index.sh
@@ -969,7 +988,7 @@ for i in 1.mafAddIRows/*.maf; do root=`basename $i`;echo "~/Software/TOGA/CESAR2
 #split maf file according to CNEs
 mkdir 2.CNEs && cd 2.CNEs
 for i in `seq 1 22` X; do grep -w "Chr$i" ../../06.phyloboot/CNEs.final.bed > Chr$i.CNEs.bed; done
-for i in ./*.CNEs.bed; do root=`basename $i .CNEs.bed`; echo "/work1/fanhzh/project/gp_project/software/CESAR2.0-1.01/tools/mafExtract -regionList=$i -leaveEdgeMeta ../1.mafAddIRows/${root}.addI.maf.bb ${root}.CNEs.maf"; done > mafExtract.sh
+for i in ./*.CNEs.bed; do root=`basename $i .CNEs.bed`; echo "/xxx/software/CESAR2.0-1.01/tools/mafExtract -regionList=$i -leaveEdgeMeta ../1.mafAddIRows/${root}.addI.maf.bb ${root}.CNEs.maf"; done > mafExtract.sh
 perl easy_submit.pl -ss SLURM -t 2 -m 15G -s yes -p normal -l 1 mafExtract.sh
 
 for i in ./*.CNEs.bed; do root=`basename $i .bed` ; awk '{print $4}' $i > ${root}.ID.txt; done
@@ -992,7 +1011,7 @@ perl easy_submit.pl -ss SLURM -t 10 -m 30G -s yes -p normal -l 1 multi_run_batch
 # Generate input files for ForwardGenomics
 vi tree.nh
 (HSA:0.0795224,((((PCR:0.0758239,(((AJU:0.00863126,LCA:0.00746509):0.000481099,(PBE:0.00747653,FCA:0.00705404):0.000944491):0.00319803,(NNE:0.00645053,PTI:0.00557254):0.00480762):0.0420401):0.0416664,((VLA:0.0132252,CLU:0.0114543):0.0826358,(((LLU:0.0243255,(MER:0.0163818,NVI:0.0168585):0.0142702):0.0502323,SIN:0.0774389):0.0199765,(AME:0.0203341,(UAM:0.00309861,(UAR:0.0018908,UMA:0.00227361):0.00155236):0.0162024):0.0421065):0.0202447):0.0196055):0.0472435,BTA:0.176567):0.00940529,MPE:0.133561):0.0795224);  #this tree in nonconserved-all-4d.mod
-for i in `seq 1 22` X Y; do mkdir Chr${i}_prank; cd Chr${i}_prank; for j in ../Chr${i}_split_maf/*.maf; do root=`basename $j .maf`; echo "~/software/ForwardGenomics-1.0/scripts/Maf2SpanningSeq_PRANK.perl $j ${root} -runPrank -treeFile ../tree.nh -BDBFile Chr${i}.bdb -twoBitPath /work1/fanhzh/project/gp_project/1.CNE/2.deal_maf/07.ForwardGenomics/0.2bit"; done > Chr${i}.prank.sh; cd ../; done
+for i in `seq 1 22` X Y; do mkdir Chr${i}_prank; cd Chr${i}_prank; for j in ../Chr${i}_split_maf/*.maf; do root=`basename $j .maf`; echo "~/software/ForwardGenomics-1.0/scripts/Maf2SpanningSeq_PRANK.perl $j ${root} -runPrank -treeFile ../tree.nh -BDBFile Chr${i}.bdb -twoBitPath /xxx/1.CNE/2.deal_maf/07.ForwardGenomics/0.2bit"; done > Chr${i}.prank.sh; cd ../; done
 
 #split scripts
 for i in `seq 1 22` X; do cd Chr${i}_prank && split -l 20000 ./Chr${i}.prank.sh split_ -d && cd ..; done
@@ -1069,7 +1088,7 @@ awk 'NR == 1 {print; next};{gls = $7 + 0; pearson = $NF + 0};$3 == 19 && $5 == 3
 #ForwardGenomics shows high sensitivity, resulting in numerous CNE deletions in giant pandas. However, since some CNEs are also missing in other species, these require filtering.
 cut -d ' ' -f 1 ForwardGenomics_out.filtered_0.01.txt > RECNEs.ID.txt
 python filter_RECNEs.py  #need to revise parameters 
-```````
+```
 
 > #### PART THREE: The pipeline for Phyloacc
 
@@ -1081,7 +1100,7 @@ do
 mkdir Chr${i}
 grep -w Chr${i} ./CNEs.final.bed > Chr${i}/Chr${i}.bed
 cat << EOF >> Chr${i}/Chr${i}.sh
-perl 01.convertMaf2List.pl /work1/fanhzh/project/gp_project/1.CNE/2.deal_maf/02.maf_sort/Chr${i}.sort.maf Chr$i    #need to revise parameters 
+perl 01.convertMaf2List.pl /xxx/1.CNE/2.deal_maf/02.maf_sort/Chr${i}.sort.maf Chr$i    #need to revise parameters 
 perl 02.lst2fas.pl Chr${i}.maf.lst ./Chr${i}.bed
 EOF
 done
@@ -1116,7 +1135,7 @@ mv neut_ver1_1_FINAL.mod input.mod
 ```bash
 conda activate phyloacc
 mkdir phyloP_out
- for i in in `seq 1 22` X; do echo "phyloP --method LRT --features /work1/fanhzh/project/gp_project/1.CNE/2.deal_maf/07.ForwardGenomics/2.CNEs/Chr$i.CNEs.bed --mode CONACC --branch AME ./neut_ver1_1_FINAL.mod --msa-format MAF ../02.maf_sort/Chr$i.sort.maf > phyloP_out/Chr1.AME.out";done > phyloP.sh
+ for i in in `seq 1 22` X; do echo "phyloP --method LRT --features /xxx/1.CNE/2.deal_maf/07.ForwardGenomics/2.CNEs/Chr$i.CNEs.bed --mode CONACC --branch AME ./neut_ver1_1_FINAL.mod --msa-format MAF ../02.maf_sort/Chr$i.sort.maf > phyloP_out/Chr1.AME.out";done > phyloP.sh
  perl easy_submit.pl -ss SLURM -t 1 -m 15G -p fat -s yes -l 1 phyloP.sh
 ```
 #### - Pseudogene Identification
@@ -1141,8 +1160,8 @@ sed "s/;/ /g" HSA.mRNA.bed | awk '{print $10,$9}' - | sed "s/ID=\|Parent=gene-//
 ### 2bit,chain
 mkdir HSA_AME_chain HSA_CLU_chain HSA_FCA_chain HSA_MER_chain HSA_NSC_chain HSA_PCR_chain HSA_UMA_chain
 for i in `seq 1 22` X Y; do 
-cp /work1/fanhzh/project/gp_project/1.CNE/Chr$i/Chr$i_AME*/all_clean.chain HSA_AME/Chr$i.all.clean.chain;done   #Copy chain files of each species to the corresponding directories respectively
-cp /work1/fanhzh/project/gp_project/1.CNE/2.deal_maf/07.ForwardGenomics/0.2bit/*/*.2bit ./
+cp /xxx/1.CNE/Chr$i/Chr$i_AME*/all_clean.chain HSA_AME/Chr$i.all.clean.chain;done   #Copy chain files of each species to the corresponding directories respectively
+cp /xxx/1.CNE/2.deal_maf/07.ForwardGenomics/0.2bit/*/*.2bit ./
 mkdir HSA_2bit
 faSplit byName HSA.genome.fna HSA_2bit
 for i in HSA_2bit/*.fa;do root=`basename $i fa`; faToTwoBit $i HSA_2bit/${root}2bit;done
