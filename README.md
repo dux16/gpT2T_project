@@ -177,7 +177,21 @@ In this study, we did not develop new software; thus, we provide example command
   ```
   #### - gpT2T vs GPv1
   ```
-  
+  ## Running mummer to align two genomes
+  nucmer -t 32 --prefix=genome_comparison gpT2T_v1.0.genome.fna GPv1_chrom.fna
+  delta-filter -i 95 -l 5000 -r -q genome_comparison.delta > genome_comparison.filtered.delta
+  show-coords -THrd genome_comparison.filtered.delta > genome_comparison.filtered.coords
+  awk 'NR > 5 {print $10"\t"$1-1"\t"$2"\t"$11"\t"$3-1"\t"$4}' genome_comparison.filtered.coords | sort -k1,1V -k2,2n | perl -alne 'print if($F[0] ne "chrY")' | perl -alne 'print if($F[0] eq "chr$F[3]")' - > genome_comparison.filtered.bed
+  bedtools merge -i genome_comparison.filtered.bed -d 100 > genome_comparison.filtered.merged.bed
+  bedtools coverage -a gpT2T_v1.0.genome.fna.bed -b genome_comparison.filtered.merged.bed > gpT2T_coverage_stats_byGPv1.txt
+  bedtools subtract -a gpT2T_v1.0.genome.fna.bed -b genome_comparison.filtered.merged.bed > gpT2T_v1.0_noCover_byGPv1.bed
+  mummerplot --png -p genome_comparison_plot genome_comparison.filtered.delta
+  ## deal coding gene's gff3
+  perl ~/tools/deal_gff/delete_gff_splice.pl gpT2T_v2.0.genome.gff3 no > gpT2T_v2.0_nosplice.genome.gff3
+  perl -F"\t" -alne 'if($F[2] eq "mRNA"){/ID=([^;]+);Parent=([^;]+)/;($t,$g)=($1,$2);$F[3]--;print "$F[0]\t$F[3]\t$F[4]\t$t\t$g";}' gpT2T_v2.0_nosplice.genome.gff3 > gpT2T_CGs_v2.0.bed
+  grep "SDs" gpT2T_v1.0_noCover_byGPv1_annotation_by_iter.bed > gpT2T_ND_SDs.bed
+  bedtools coverage -a gpT2T_CGs_v2.0.bed -b gpT2T_ND_SDs.bed | perl -alne 'print if($F[-1]>=0.9)' - > gpT2T_NewAdd_PCGs_forSDs.bed
+  bedtools coverage -a gpT2T_CGs_v2.0.bed -b gpT2T_v1.0_noCover_byGPv1.bed | perl -alne 'print if($F[-1]>=0.9)' - > gpT2T_NewAdd_PCGs.bed
   ```
 ### - Genome Annoation
 #### - Annotation of repetitive elements
