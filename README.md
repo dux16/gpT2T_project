@@ -633,9 +633,39 @@ b.Ampliconic
   mafft --auto --thread 10 ERV1.fa >ERV1.fa.align
   raxml-ng --msa ERV1.fa.align --model GTR+G
   ```
-#### - Curation of Y chromosome genes
-   ```
-   ```
+#### - Curation of Y chromosome coding genes and pseudogenes
+> ##### Protein-coding genes
+   [IGV](https://github.com/igvteam/igv) was used to manually curate the protein genes annotations of Y chromosome, such as filter.
+  ```
+  perl -alne 'next if($F[0]=~/Amel\./);$h{$F[0]}++;if($h{$F[0]}==1){print if($F[5]/$F[2]>=0.6 and $F[9]/$F[3]>=0.6 and $F[4]>=30)}' gpAX2swissprot.blast6 |awk '{print $1}' -> HQ_gpAX_gene.list
+  
+  ```
+> ##### Pseudogenes
+  ```
+# input files: swissprot-20231225-mammalia.fasta, gpT2T_annot_v2.0.gff3, gp_annot_v2.pep.fa, chrY_softmask.fna
+# annotation2swissprot
+makeblastdb -in swissprot-20231225-mammalia.fasta -out db/swissprot -dbtype prot
+blastp -db db/swissprot -query gp_annot_v2.pep.fa -out gpT2T2swissprot.blast6 -outfmt "6 qaccver saccver qlen slen pident length mismatch gapopen qstart qend sstart send evalue bitscore" -evalue 1e-5  -num_threads 30 -num_alignments 5
+
+# filter blastOut6
+perl -alne 'next if($F[0]=~/Amel\./);$h{$F[0]}++;if($h{$F[0]}==1){print if($F[5]/$F[2]>=0.6 and $F[9]/$F[3]>=0.6 and $F[4]>=30)}' gpT2T2swissprot.blast6 | awk '{print $1}' > gpT2T2_HQ_genes.list
+# extract HQ protein
+perl ~/tools/get_seq_based_name.pl gp_annot_v2.pep.fa gpT2T2_HQ_genes.list > gpT2T_HQ.pep.fa
+
+# miniprot --version => 0.2-r120-dirty
+miniprot chrY_softmask.fna gpT2T_HQ.pep.fa --gff > gpT2T_HQ2chrY.gff3
+
+grep "chrY" gpT2T_annot_v2.0.gff3 | perl -F"\t" -alne 'if($F[2] eq "gene"){$F[8]=~/Name=(\S+)/;$F[3]--;print join "\t",(@F[0,3,4],$1)}' - > chrY_anno.bed4
+# transformat: gff3 to bed4; filter: 1. mapping ratio no less than 60% && 2. identity >= 60%
+perl -F"\t" -alne 'if($F[2]eq"mRNA"){$F[8]=~/Target=(\S+)/;$F[3]--;print join "\t",(@F[0,3,4,8]);}' gpT2T_HQ2chrY.gff3 > gpT2T_HQ2chrY.bed
+bedtools coverage -a gpT2T_HQ2chrY.bed -b chrY_anno.bed4 | perl -alne 'if($F[-1]>0){print STDERR}else{print STDOUT}' - >chrY_potential_pseudogenes.bed 2>chrY_normal_genes.bed
+perl ~/tools/get_seqlen.pl gpT2T_HQ.pep.fa > HQ_gene_prot_length.txt
+perl -e 'for(`cat HQ_gene_prot_length.txt`){chomp;@a=split/\t/;$h{$a[0]}=$a[1];}for(`cat chrY_potential_pseudogenes.bed`){chomp; @b=split/\t/;$b[3]=~/Target=(\S+)\s+(\d+)\s+(\d+)/;($g,$s,$e)=($1,$2,$3);$r=($e-$s+1)/$h{$g};$b[3]=~/Identity=([^;]+)/;$b[3].=" $h{$g}";print "$b[0]\t$b[1]\t$b[2]\t$b[3]\n" if($r>=0.6 and $1>=0.6)}' | sort -k1,1V -k2,2n | bedtools merge -i - -delim "|" -c 4 -o collapse | perl -F"\t" -alne '@a=split/\|/,$F[3];$i=0 if(!$i);$l++;for my $p(@a){$p=~/Identity=([^;]+)/;$t=$1;if($t>$i){$i=$t;$h{$l}="$F[0]\t$F[1]\t$F[2]\t$p";}$i=0;}END{print $h{$_} for(sort {$a<=>$b} keys %h);}' - > chrY_final_pseudogenes.bed
+
+perl -alne '$F[3]=~/ID=([^;]+).+Target=(\S+)/;$id=$1;$n=$2;$n=~s/\.c\d+$//g;$h{$n}++;print "$F[0]\t$F[1]\t$F[2]\t$id\t$F[3]\t$n-$h{$n}";' chrY_final_pseudogenes.bed > chrY_final_pseudogenes_rename.bed
+perl ~/tools/filter_annotation/06.merge_sort_gff.pl gpT2T_HQ2chrY.gff3 > gpT2T_HQ2chrY_formated.sorted.gff3
+awk '{print $4}' chrY_final_pseudogenes_rename.bed | perl ~/tools/filter_annotation/z.extract_gff_baseName.pl gpT2T_HQ2chrY_formated.sorted.gff3 - m > chrY_final_pseudogenes.gff3
+  ```
 #### - The species-species divergence calculation of giant panda and brown bear
   ```
   ```
