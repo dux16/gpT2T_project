@@ -239,8 +239,14 @@ bash run_GeMoMa.sh
 " > GeMoMa_sbatch.sh
   sbatch GeMoMa_sbatch.sh
   ## RNA-seq annotation
-  
+  ### preparing the cleaned reads using fastp with deafalut paramaters.
+  # The name format of read files: tissue_name_R1.fastq.gz, tissue_name_R2.fastq.gz.
+  perl ./scripts/RNAseq_annot_pipe.pl -fd /xxx/bulk_RNAseq_clean_reads -fl FL_RNAseq_hq.fasta -et submit -at blat,gmap,minimap2 -g gpT2T.genome.fna -s gpT2T -gg -t 64
   ## Ab initio prediction
+  ### augustus
+  
+  ### braker3
+  
   ```
 > ##### Intergrating these results
   The [EVidenceModeler](https://github.com/EVidenceModeler/EVidenceModeler) was used to combine these gff3 files derived from three level evidences.
