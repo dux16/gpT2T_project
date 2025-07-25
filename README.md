@@ -219,7 +219,7 @@ In this study, we did not develop new software; thus, we provide example command
   rm -rf split_by_scaffold
   perl ./scripts/ConvertTrf2Gff.pl gpT2T.genome.fna.2.7.7.80.10.50.2000.dat TRF.gff
   ```
-#### - Annoation of protein coding genes
+#### - Prediction of protein coding genes
 > ##### Homology-based prediction
   ```
   for i in cat cattle dog giant_panda horse human pig polar_bear;
