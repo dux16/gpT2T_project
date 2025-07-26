@@ -253,7 +253,7 @@ The ConvertFormat_augustus.pl for format conversion can be found [here](https://
   augustus --species=Amel genome_sequence.fa | perl ConvertFormat_augustus.pl - genome_sequence.fa.gff
   ## braker3
   singularity exec -B ${PWD}:${PWD} ${BRAKER_SIF} braker.pl --species=Amel --genome=gpT2T.genome.softmask.fna --bam=merged_sorted.bam --softmasking --workingdir=`pwd`/braker_results --GENEMARK_PATH=${ETP}/gmes --threads 48 --gm_max_intergenic 500000 --prot_seq=swissprot-20231225-mammalia.fasta --gff3
-  ## genescan
+  ## genscan
   genscan /xxx/genscan/HumanIso.smat genome_sequence.fa | ./scripts/ConvertFormat_genscan.pl - > genome_sequence.fa.gff
 ```  
 > ##### Intergrating these results
